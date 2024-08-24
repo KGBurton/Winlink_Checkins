@@ -1,12 +1,4 @@
-﻿
-
-
-
-
-
-
-
-//c# code that will input start date, end date, and callSign and will select files with an extension of mime from the current folder  based on start date and end date, and will read each file to find a line labeled To: . If the rest of the line contains callSign, then write the data from the line labeled X-Source: to a text file called checkins.txt in the same folder
+﻿//c# code that will input start date, end date, and callSign and will select files with an extension of mime from the current folder  based on start date and end date, and will read each file to find a line labeled To: . If the rest of the line contains callSign, then write the data from the line labeled X-Source: to a text file called checkins.txt in the same folder
 // Design Get the date range
 // get the data source
 // is it a message file? (.mime)
@@ -100,12 +92,15 @@ class Winlink_Checkins
         StringBuilder duplicates = new StringBuilder();
         StringBuilder newCheckIns = new StringBuilder();
         StringBuilder csvString = new StringBuilder();
+        StringBuilder mapString = new StringBuilder();
+        mapString.Append("CallSign,Latitude,Longitude,Band\r\n"); 
         StringBuilder skippedString = new StringBuilder();
         StringBuilder removalString = new StringBuilder();
         string callSignPattern = @"\b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b";
         string testString = "";
         string rosterString = "";
-
+        string bandStr = "";
+        TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
 
         if (File.Exists(rosterFile))
         {
@@ -144,15 +139,18 @@ class Winlink_Checkins
         var dyfiCt = 0;
         var rriCt = 0;
         var junk = 0;
-        // var startCt = 0;
-
+        var mapCt = 0;
+        string locType = "";
+        string latitude = "";
+        string longitude = "";
+        string xSource = "";
+        
         // Select files with an extension of mime from the current folder.
         var files = Directory.GetFiles(currentFolder, "*.mime")
             .Where(file =>
             {
-                //  DateTime fileDate = File.GetCreationTime(file);
                 DateTime fileDate = File.GetLastWriteTime(file);
-                //debug Console.Write(fileDate+"\n");
+                // debug Console.Write(fileDate+"\n");
                 return fileDate >= startDate && fileDate <= endDate.AddDays(1);
             });
 
@@ -162,10 +160,10 @@ class Winlink_Checkins
         using (StreamWriter logWrite = new(Path.Combine(currentFolder, "checkins.txt")))
         // Create a text file called checkins.csv in the data folder and process the list of files.
         using (StreamWriter csvWrite = new(Path.Combine(currentFolder, "checkins.csv")))
-
+        // Create a csv text file called mapfile.csv in the data folder to use as date for google maps
+        using (StreamWriter mapWrite = new(Path.Combine(currentFolder, "mapfile.csv")))
         {
             // Read each file selected to find a line labeled To: and if the rest of the line contains netName, write the data from the line labeled X-Source: to the text file.
-
             foreach (string file in files)
             {
                 using (StreamReader reader = new StreamReader(file))
@@ -216,7 +214,7 @@ class Winlink_Checkins
                     var ics = fileText.IndexOf("TEMPLATE VERSION: ICS 213");
 
                     // check for winlink checkin message
-                    var ckin = fileText.IndexOf("MAP FILE NAME: WINLINK CHECK-IN", endHeader);
+                    var ckin = fileText.IndexOf("MAP FILE NAME: WINLINK CHECK", endHeader);
                     // some people include WINLINK CHECK-IN in the subject which confuses the program
                     // into thinking this is a winlink checkin FORM!! Catch it ...
                     if (ckin > 0) 
@@ -225,7 +223,6 @@ class Winlink_Checkins
                     }
 
                     // check for odd checkin message - don't let it scan through to a binary attachment!
-
                     var lenBPQ = fileText.Length-10;
                     if (lenBPQ > 800) { lenBPQ = 800; }
                     var BPQ = fileText.IndexOf("BPQ", 1, lenBPQ);
@@ -249,7 +246,7 @@ class Winlink_Checkins
                     var qwm = fileText.IndexOf("TEMPLATE VERSION: QUICK WELFARE MESSAGE");
 
                     // check for Medical Incident Report
-                    var mi = fileText.IndexOf("INITIAL PATIENT ASSESSMENT");                 
+                    var mi = fileText.IndexOf("INITIAL PATIENT ASSESSMENT");
 
                     // screen dates to eliminate file dates that are different from the sent date and fall outside the net span
                     int startDateCompare = DateTime.Compare(sentDateUni, startDate);
@@ -319,6 +316,38 @@ class Winlink_Checkins
 
                         if (subjText.Contains(netName))
                         {
+                            // get x-location information
+                            var xLoc = fileText.IndexOf("X-LOCATION: ");
+                            latitude =""; longitude = ""; locType =""; xSource ="";
+                            if (xLoc > 0)
+                            {
+                                startPosition = xLoc+12;
+                                endPosition = fileText.IndexOf(",", startPosition);
+                                len = endPosition - startPosition;
+                                if (len > 0) { latitude = fileText.Substring(startPosition, len); }
+                                startPosition = endPosition+2;
+                                endPosition = fileText.IndexOf(" ", startPosition);
+                                len = endPosition - startPosition;
+                                if (len > 0) { longitude = fileText.Substring(startPosition, len); }
+                                // get location type
+                                startPosition = endPosition+1;
+                                endPosition = fileText.IndexOf(")", startPosition)+1;
+                                len = endPosition - startPosition;
+                                if (len > 0) { locType = fileText.Substring(startPosition, len); }
+                                // Console.Write("Latitude ="+latitude+   "    Longitude = "+longitude+"    Type = " + locType+"\r\n");
+                            }
+
+                            // get x-Source if available
+                            var xSrc = fileText.IndexOf("X-SOURCE: ");
+                            if (xSrc > 0)
+                            {
+                                startPosition = xSrc +10;
+                                endPosition = fileText.IndexOf("\r\n", startPosition);
+                                len = endPosition - startPosition;
+                                if (len > 0) { xSource = fileText.Substring(startPosition, len); }
+                            }
+
+
                             // adjust for ICS 213
                             if (ics > 0)
                             {
@@ -336,11 +365,13 @@ class Winlink_Checkins
                                     endPosition = fileText.IndexOf("APPROVED BY:", startPosition)-3;
                                 }
                             }
-
                             // adjust for winlink checkin
                             else if (ckin >0)
                             {
-                                startPosition = fileText.IndexOf("COMMENTS:")+13;
+                                // the winlink check-in form changed format between 5.0.10 and 5.0.5 so check for that
+                                var ckinOffset = fileText.IndexOf("WINLINK CHECK-IN 5.0.5");
+                                if (ckinOffset > 0) { ckinOffset = 9; } else { ckinOffset = 13; }
+                                startPosition = fileText.IndexOf("COMMENTS:")+ckinOffset;
                                 endPosition = fileText.IndexOf("----------", startPosition)-1;
                             }
 
@@ -383,7 +414,7 @@ class Winlink_Checkins
                             else if (dyfi > 0)
                             {
                                 startPosition = fileText.IndexOf("COMMENTS")+11;
-                                endPosition = fileText.IndexOf("FORM VER", startPosition)-1;
+                                endPosition = fileText.IndexOf("\r\n", startPosition)-1;
                             }
 
                             else if (rriWR > 0)
@@ -403,7 +434,6 @@ class Winlink_Checkins
                                 startPosition = fileText.IndexOf("\r\n", startPosition);
                                 endPosition = fileText.IndexOf("----", startPosition)-1;
                             }
-
                             else
                             {
                                 // end of the header information as the start of the msg field
@@ -440,22 +470,29 @@ class Winlink_Checkins
                             if (len < 0)
                             {
                                 Console.Write("endPostion is less than startPosition in: "+file+"\n");
-                                Console.Write("Break at line 443ish. Press enter to close.");
+                                Console.Write("Break at line 473ish. Press enter to close.");
                                 input = Console.ReadLine();
                                 break;
                             }
 
-
                             string checkIn = fileText.Substring(startPosition, len);
-                            checkIn = checkIn.Replace("=20", " ")
-                                .Replace("=0A", ", ")
+                            checkIn = checkIn.Replace("=20", "")
+                                .Replace("=0A", "")
+                                .Replace("=0", "")
                                 .Replace("16. CONTACT INFO:", ",")
+                                .Replace("  ", " ")
+                                .Replace("  ", " ")
+                                .Replace(", ", ",")
+                                .Replace(", ", ",")
+                                .Replace(" ,", ",")
                                 .Replace("\n", ", ")
                                 .Replace("\r", "")
+                                .Replace("\"", "")
                                 .Trim()
                                 .Trim(',');
-                            string msgField = checkIn.Replace("\r", "");
-
+                            string msgField = checkIn.
+                                Replace(" ,", ",")                                
+                                .Trim()+",";
 
                             // Create a Regex object with the pattern
                             Regex regexCallSign = new Regex(callSignPattern, RegexOptions.IgnoreCase);
@@ -465,6 +502,7 @@ class Winlink_Checkins
                             if (match.Success)
                             {
                                 checkIn = match.Value;
+                                if (xSource == "") { xSource = checkIn; }
                             }
                             else
                             {
@@ -485,13 +523,11 @@ class Winlink_Checkins
                                     }
                                     else
                                     {
-                                        checkIn =""; 
+                                        checkIn ="";
                                     }
                                 }
-
                             }
                             // debug Console.Write("Start at:"+startPosition+": and end at:"+endPosition+"\nCallsign found: "+checkIn);
-
                             // eliminate duplicates                                
                             if (checkIn == "")
                             {
@@ -536,7 +572,26 @@ class Winlink_Checkins
                                     }
                                     netAckString2.Append(checkIn+";");
                                     // find message, format for csv file, and save
-                                    csvString.Append(msgField+"\r\n");
+                                    csvString.Append(xSource+","+latitude+","+longitude+","+locType+","+msgField+"\r\n");
+
+                                    // find the band if it's where it's supposed to be
+                                    bandStr ="";
+                                    len =0;
+                                    // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
+                                    startPosition = IndexOfNthSB(msgField, (char)44, 0, 6)+1;
+                                    if (startPosition > 0) { endPosition = IndexOfNthSB(msgField, (char)44, 0, 7); len = endPosition-startPosition; }
+                                    if (len > 0 && msgField.Length >= len) 
+                                    {
+                                        bandStr=  msgField.Substring(startPosition, len)
+                                            .Replace(" ", "")
+                                            .ToLower();
+                                        if (bandStr =="telnet") { bandStr = textInfo.ToTitleCase(bandStr.ToLower()); }
+                                            
+                                    }
+                                    // debug Console.Write("bandStr final=|"+bandStr+"|  \r\n");
+
+                                    // add to mapString csv file if xloc was found
+                                    if (latitude != "") { mapString.Append(xSource+","+latitude+","+longitude+","+bandStr+"\r\n"); }
                                 }
                                 junk = 0; // just so i could put a debug here
                             }
@@ -557,7 +612,6 @@ class Winlink_Checkins
                                 File.AppendAllText("roster.txt", "; "+  checkIn);
                                 newCt++;
                             }
-
                         }
                         else
                         {
@@ -584,6 +638,8 @@ class Winlink_Checkins
             logWrite.WriteLine(netCheckinString);
             logWrite.WriteLine(netAckString2);
             csvWrite.WriteLine(csvString);
+            mapWrite.WriteLine(mapString);
+
             if (duplicates.Length==0)
             {
                 duplicates.Append("No duplicates found this week.");
@@ -611,28 +667,32 @@ class Winlink_Checkins
             logWrite.WriteLine("Did You Feel It: "+dyfiCt);
             logWrite.WriteLine("RRI Welfare Radiogram: "+rriCt);
             logWrite.WriteLine("Medical Incident: "+miCt);
-
             logWrite.WriteLine("Total Plain and other Checkins: "+(ct-localWeatherCt-severeWeatherCt-incidentStatusCt-icsCt-ckinCt-damAssessCt-fieldSitCt-quickHWCt-dyfiCt-rriCt-qwmCt-miCt));  
-            // var localWeatherCt = 0; var severeWeatherCt = 0; var incidentStatusCt = 0;
-            // var icsCt = 0; var ckinCt = 0; var damAssessCt = 0; var fieldSitCt = 0;
-
-
-
         }
         Console.WriteLine("Done!\nThere were "+ct+" checkins. \nThe output checkins.txt can be found in the folder \n"+currentFolder);
-        // Console.WriteLine("\nBe sure to update the roster.txt file if you receive new checkins. The app does not do that automatically yet.\n\n");
         Console.WriteLine("\n\nPress enter to continue.");
         Console.ReadLine();
     }
     //public static class Globals
-    //{
-        // public static object startCt;
-    // }
+    public static int IndexOfNthSB(string input,
+             char value, int startIndex, int nth)
+    {
+        if (nth < 1)
+            throw new NotSupportedException("Param 'nth' must be greater than 0!");
+        var nResult = 0;
+        for (int i = startIndex; i < input.Length; i++)
+        {
+            if (input[i] == value)
+                nResult++;
+            if (nResult == nth)
+                return i;
+        }
+        return -1;
+    }
     static DateTime GetValidDate()
     {
         DateTime date = default;  // Initialize date to its default value
         bool isValid = false;
-        // string prompt = "Please enter the start date of the net (YYYYMMDD):";
         
         while (!isValid)
         {
@@ -643,21 +703,18 @@ class Winlink_Checkins
             // Validate using the specific format YYYYMMDD
             if (DateTime.TryParseExact(input, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out date))
             {                
-                //var inputDate = input; 
                 isValid = true;
                 dateCompare = DateTime.Compare(date, todayDate.AddDays(-14));
                 if ( dateCompare<0)
                 {
                     isValid =false;
                     Console.WriteLine("Invalid date: "+date+" Must be within two weeks of today. Please try again.");
-
                 }
                 dateCompare = DateTime.Compare(todayDate.AddDays(14),date);
                 if (dateCompare<0)
                 {
                     isValid =false;
                     Console.WriteLine("Invalid date: "+input+" Must be within two weeks of today.  Please try again.");
-
                 }
             }
             else
@@ -665,14 +722,12 @@ class Winlink_Checkins
                 Console.WriteLine("Invalid date format. "+input+"Please use YYYYMMDD format and try again.");
             }
         }
-
         return date;
     }
 
     static void SaveDate(DateTime date)
     {
         string filePath = "dates.txt";
-
         try
         {
             using (StreamWriter writer = new StreamWriter(filePath, true))
@@ -685,6 +740,4 @@ class Winlink_Checkins
             Console.WriteLine($"An error occurred while saving the date: {ex.Message}");
         }
     }
-
-
 }
