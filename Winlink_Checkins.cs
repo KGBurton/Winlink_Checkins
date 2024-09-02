@@ -103,6 +103,7 @@ class Winlink_Checkins
         string rosterString = "";
         string bandStr = "";
         string modeStr = "";
+        Random rnd = new Random();
         TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
 
         if (File.Exists(rosterFile))
@@ -146,8 +147,8 @@ class Winlink_Checkins
         var bandCt = 0;
         var modeCt = 0;
         string locType = "";
-        string latitude = "";
-        string longitude = "";
+        // string latitude = "";
+        // string longitude = "";
         string xSource = "";
         
         // Select files with an extension of mime from the current folder.
@@ -322,27 +323,54 @@ class Winlink_Checkins
                         if (subjText.Contains(netName))
                         {
                             // get x-location information
-                            var xLoc = fileText.IndexOf("X-LOCATION: ");
-                            latitude =""; longitude = ""; locType =""; xSource ="";
-                            if (xLoc > 0)
-                            {
-                                startPosition = xLoc+12;
-                                endPosition = fileText.IndexOf(",", startPosition);
-                                len = endPosition - startPosition;
-                                if (len > 0) { latitude = fileText.Substring(startPosition, len); }
-                                startPosition = endPosition+2;
-                                endPosition = fileText.IndexOf(" ", startPosition);
-                                len = endPosition - startPosition;
-                                if (len > 0) { longitude = fileText.Substring(startPosition, len); }
-                                // get location type
-                                startPosition = endPosition+1;
-                                endPosition = fileText.IndexOf(")", startPosition)+1;
-                                len = endPosition - startPosition;
-                                if (len > 0) { locType = fileText.Substring(startPosition, len); }
-                                // Console.Write("Latitude ="+latitude+   "    Longitude = "+longitude+"    Type = " + locType+"\r\n");
-                            }
+                            // var xLoc = fileText.IndexOf("X-LOCATION: ");
+                            // latitude =""; longitude = ""; locType =""; xSource ="";
+                            // if (xLoc > 0)
+                            // {
+                            // startPosition = xLoc+12;
+                            // endPosition = fileText.IndexOf(",", startPosition);
+                            // len = endPosition - startPosition;
+                            // if (len > 0) { latitude = fileText.Substring(startPosition, len); }
+                            // startPosition = endPosition+2;
+                            // endPosition = fileText.IndexOf(" ", startPosition);
+                            // len = endPosition - startPosition;
+                            // if (len > 0) { longitude = fileText.Substring(startPosition, len); }
+                            // // get location type
+                            // startPosition = endPosition+1;
+                            // endPosition = fileText.IndexOf(")", startPosition)+1;
+                            // len = endPosition - startPosition;
+                            // if (len > 0) { locType = fileText.Substring(startPosition, len); }
+                            // // Console.Write("Latitude ="+latitude+   "    Longitude = "+longitude+"    Type = " + locType+"\r\n");
+                            // }
+                            // 
+                            // string input = "Coordinates: 40.7128° N, 74.0060° W";
 
-                            // get x-Source if available
+                            // Extract latitude and longitude
+                            if (ExtractCoordinates(fileText, out double latitude, out double longitude))
+                            {
+                                // Console.WriteLine(messageID+" latitude: "+latitude+" longitude: "+longitude);                                
+                            }
+                            else
+                            {
+                                // no valid GPS coordinates found, look for a maidenhead grid
+                                string maidenheadGrid = ExtractMaidenheadGrid(fileText);
+                                if (!string.IsNullOrEmpty(maidenheadGrid))
+                                {
+                                    // Console.WriteLine($"Maidenhead Grid: {maidenheadGrid}");
+                                    // Convert Maidenhead to GPS coordinates
+                                    (latitude, longitude) = MaidenheadToGPS(maidenheadGrid);
+                                    Console.WriteLine($"No GPS coords found, using Maidenhead Grid: {maidenheadGrid}"+$". From Maidenhead Grid Latitude: {latitude}"+$"Longitude: {longitude}");
+                                }
+                                else
+                                {
+                                    // No valid Maidenhead grid found either, make up something in the middle of the Atlantic
+                                    double locChange = Math.Round(rnd.NextDouble()*10, 6);
+                                    latitude = Math.Round((27.187512+locChange), 6);
+                                    longitude= Math.Round((-60.144742+locChange), 6);
+                                    Console.WriteLine("No valid grid and no GPS coordinates found in: "+messageID+" latitude set to: "+latitude+" longitude set to: "+longitude);
+                                }
+                            }
+                            // get x-Source if available XXXX
                             var xSrc = fileText.IndexOf("X-SOURCE: ");
                             if (xSrc > 0)
                             {
@@ -597,6 +625,8 @@ class Winlink_Checkins
                                             .Replace("vhf", "2m")
                                             .Replace("(", "")
                                             .Replace(")", "")
+                                            .Replace("n/a", "Telnet")
+                                            .Replace("na", "Telnet")
                                             ;
                                         if (bandStr.IndexOf("m") == -1 && bandStr != "telnet")
                                         {
@@ -745,7 +775,7 @@ class Winlink_Checkins
 
 
                                     // add to mapString csv file if xloc was found
-                                    if (latitude != "") { 
+                                    if (latitude != 0) { 
                                         mapString.Append(xSource+","+latitude+","+longitude+","+bandStr+","+modeStr+"\r\n");
                                         mapCt++;
                                     }
@@ -899,5 +929,76 @@ class Winlink_Checkins
         {
             Console.WriteLine($"An error occurred while saving the date: {ex.Message}");
         }
+    }
+    static bool ExtractCoordinates(string input, out double latitude, out double longitude)
+    {
+        // Initialize output variables
+        latitude = 0;
+        longitude = 0;
+
+        // Define the regular expression for latitude and longitude (with optional N/S/E/W directions)
+        Regex regex = new Regex(@"([-+]?[0-9]*\.?[0-9]+)\s*[°]?\s*([NS]),?\s*([-+]?[0-9]*\.?[0-9]+)\s*[°]?\s*([EW])", RegexOptions.IgnoreCase);
+
+        // Search for the latitude and longitude pattern in the input string
+        Match match = regex.Match(input);
+
+        if (match.Success)
+        {
+            // Extract the numeric part of latitude
+            latitude = Math.Round( double.Parse(match.Groups[1].Value), 6);
+            // If it's south (S), negate the latitude
+            if (match.Groups[2].Value.ToUpper() == "S")
+                latitude = -latitude;
+            // Extract the numeric part of longitude
+            longitude = Math.Round(double.Parse(match.Groups[3].Value), 6);
+            // If it's west (W), negate the longitude
+            if (match.Groups[4].Value.ToUpper() == "W")
+                longitude = -longitude;
+
+            return true;
+        }
+
+        // Return false if latitude and longitude are not found
+        return false;
+    }
+    static string ExtractMaidenheadGrid(string input)
+    {
+        // Define the regular expression for Maidenhead grid locator (4 or 6 character grids)
+        Regex regex = new Regex(@"\b([A-R]{2}\d{2}[A-X]{0,2})\b", RegexOptions.IgnoreCase);
+
+        // Search for a match in the input string
+        Match match = regex.Match(input);
+
+        if (match.Success)
+        {
+            return match.Value.ToUpper(); // Return the Maidenhead grid in uppercase
+        }
+
+        return string.Empty; // Return an empty string if no match is found
+    }
+
+    static (double, double) MaidenheadToGPS(string maidenhead)
+    {
+        if (maidenhead.Length < 4 || maidenhead.Length % 2 != 0)
+            throw new ArgumentException("Invalid Maidenhead grid format.");
+
+        maidenhead = maidenhead.ToUpper();
+
+        // Calculate the longitude
+        int lonField = maidenhead[0] - 'A'; // First letter
+        int lonSquare = maidenhead[2] - '0'; // First number
+        int lonSubsquare = maidenhead.Length >= 6 ? maidenhead[4] - 'A' : 0; // Optional letter for sub-square
+
+        // Calculate the latitude
+        int latField = maidenhead[1] - 'A'; // Second letter
+        int latSquare = maidenhead[3] - '0'; // Second number
+        int latSubsquare = maidenhead.Length >= 6 ? maidenhead[5] - 'A' : 0; // Optional letter for sub-square
+
+        // Convert Maidenhead to latitude and longitude
+        double lon = -180.0 + (lonField * 20.0) + (lonSquare * 2.0) + (lonSubsquare * (2.0 / 24.0)) + (2.0 / 48.0);
+        double lat = -90.0 + (latField * 10.0) + (latSquare * 1.0) + (latSubsquare * (1.0 / 24.0)) + (1.0 / 48.0);
+        lat = Math.Round(lat,6);
+        lon = Math.Round(lon,6);
+        return (lat, lon);
     }
 }
