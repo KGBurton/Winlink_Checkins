@@ -43,13 +43,13 @@ class Winlink_Checkins
         bool isValid = false;
         string input;
         
-        Console.WriteLine("Please enter the start date - must be within two weeks of today (yyyymmdd): ");
+        Console.WriteLine("Enter the start date - must be within two weeks of today (yyyymmdd): ");
         startDate = GetValidDate();
         //startDate = startDate.ToUniversalTime();
 
         while (!isValid)
         {
-            Console.WriteLine("Please enter the end date - must be within two weeks of today (yyyymmdd): ");
+            Console.WriteLine("Enter the end date - must be within two weeks of today (yyyymmdd): ");
             endDate = GetValidDate();
             int startDateCompare = DateTime.Compare(startDate, endDate);
             if (startDateCompare >= 0)
@@ -95,14 +95,21 @@ class Winlink_Checkins
         StringBuilder csvString = new StringBuilder();
         StringBuilder mapString = new StringBuilder();
         mapString.Append("CallSign,Latitude,Longitude,Band,Mode\r\n");
-        StringBuilder badFormatString = new StringBuilder();
+        StringBuilder badBandString = new StringBuilder();
+        StringBuilder badModeString = new StringBuilder();
         StringBuilder skippedString = new StringBuilder();
         StringBuilder removalString = new StringBuilder();
+        StringBuilder addonString = new StringBuilder();
+        StringBuilder noGPSString = new StringBuilder();
         string callSignPattern = @"\b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b";
         string testString = "";
         string rosterString = "";
         string bandStr = "";
         string modeStr = "";
+        string noGPSStr = "";
+        string checkIn = "";
+        string msgFieldNumbered = "";
+        noGPSString.Append ( "\r\n++++++++\r\nThese had neither GPS data nor Maidenhead Grids\r\n-------------------------\r\n");
         Random rnd = new Random();
         TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
 
@@ -146,6 +153,11 @@ class Winlink_Checkins
         var mapCt = 0;
         var bandCt = 0;
         var modeCt = 0;
+        var aprsCt = 0;
+        var meshCt = 0;
+        var noGPSCt = 0;
+        var badBandCt = 0;
+        var badModeCt = 0;
         string locType = "";
         // string latitude = "";
         // string longitude = "";
@@ -198,6 +210,9 @@ class Winlink_Checkins
                     // was it forwarded?
                     var forwarded = fileText.IndexOf("WAS FORWARDED BY");
 
+                    // was it APRSmail?
+                    var APRS = fileText.IndexOf("APRSEMAIL2");
+
                     // check for acknowledgement message and discard                  
                     var ack = fileText.IndexOf("ACKNOWLEDGEMENT");
 
@@ -223,11 +238,11 @@ class Winlink_Checkins
                     var ckin = fileText.IndexOf("MAP FILE NAME: WINLINK CHECK", endHeader);
                     // some people include WINLINK CHECK-IN in the subject which confuses the program
                     // into thinking this is a winlink checkin FORM!! Catch it ...
-                    if (ckin > 0) 
+                    if (ckin < 0) 
                     {
-                        ckin = fileText.IndexOf("0. HEADER", endHeader);
+                        ckin = fileText.IndexOf("WINLINK CHECK-IN 5.0.10", endHeader);
                     }
-
+                    
                     // check for odd checkin message - don't let it scan through to a binary attachment!
                     var lenBPQ = fileText.Length-10;
                     if (lenBPQ > 800) { lenBPQ = 800; }
@@ -279,7 +294,7 @@ class Winlink_Checkins
                         startPosition = fileText.IndexOf("FROM:")+6;
                         endPosition = fileText.IndexOf("\r\n", startPosition);
                         len = endPosition - startPosition;
-                        string checkIn = fileText.Substring(startPosition, len);
+                        checkIn = fileText.Substring(startPosition, len);
                         {
                             checkIn = checkIn.Replace(',', ' ');
                             // Create a Regex object with the pattern
@@ -297,7 +312,7 @@ class Winlink_Checkins
                         startPosition = bounced;
                         endPosition = fileText.IndexOf("\r\n", startPosition);
                         len = endPosition - startPosition;
-                        string checkIn = fileText.Substring(startPosition, len);
+                        checkIn = fileText.Substring(startPosition, len);
                         {
                             checkIn = checkIn.Replace(',', ' ');
                             // Create a Regex object with the pattern
@@ -343,8 +358,7 @@ class Winlink_Checkins
                             // // Console.Write("Latitude ="+latitude+   "    Longitude = "+longitude+"    Type = " + locType+"\r\n");
                             // }
                             // 
-                            // string input = "Coordinates: 40.7128° N, 74.0060° W";
-
+                           
                             // Extract latitude and longitude
                             if (ExtractCoordinates(fileText, out double latitude, out double longitude))
                             {
@@ -359,7 +373,7 @@ class Winlink_Checkins
                                     // Console.WriteLine($"Maidenhead Grid: {maidenheadGrid}");
                                     // Convert Maidenhead to GPS coordinates
                                     (latitude, longitude) = MaidenheadToGPS(maidenheadGrid);
-                                    Console.WriteLine($"No GPS coords found, using Maidenhead Grid: {maidenheadGrid}"+$". From Maidenhead Grid Latitude: {latitude}"+$"Longitude: {longitude}");
+                                    // Console.WriteLine($"No GPS coords found, using Maidenhead Grid: {maidenheadGrid}"+$". From Maidenhead Grid Latitude: {latitude}"+$"  Longitude: {longitude}");
                                 }
                                 else
                                 {
@@ -367,7 +381,8 @@ class Winlink_Checkins
                                     double locChange = Math.Round(rnd.NextDouble()*10, 6);
                                     latitude = Math.Round((27.187512+locChange), 6);
                                     longitude= Math.Round((-60.144742+locChange), 6);
-                                    Console.WriteLine("No valid grid and no GPS coordinates found in: "+messageID+" latitude set to: "+latitude+" longitude set to: "+longitude);
+                                    // Console.WriteLine("No valid grid and no GPS coordinates found in: "+messageID+" latitude set to: "+latitude+" longitude set to: "+longitude);
+                                    noGPSString.Append("\t"+messageID+"- - "+checkIn+": latitude set to: "+latitude+" longitude set to: "+longitude+"\r\n");
                                 }
                             }
                             // get x-Source if available XXXX
@@ -380,9 +395,20 @@ class Winlink_Checkins
                                 if (len > 0) { xSource = fileText.Substring(startPosition, len); }
                             }
 
+                            // skip APRS header 
+                            if (APRS > 0)
+                            {
+                                startPosition = fileText.IndexOf("FROM:", APRS);
+                                if (startPosition > 0)
+                                {
+                                    startPosition = fileText.IndexOf("\r\n", startPosition)+2;
+                                    endPosition = fileText.IndexOf("DO NOT REPLY", startPosition)-1;
+                                }
+                                aprsCt++;
+                            }
 
                             // adjust for ICS 213
-                            if (ics > 0)
+                            else if (ics > 0)
                             {
                                 // check first is it a reply (checkin will be in a different location
 
@@ -403,8 +429,9 @@ class Winlink_Checkins
                             {
                                 // the winlink check-in form changed format between 5.0.10 and 5.0.5 so check for that
                                 var ckinOffset = fileText.IndexOf("WINLINK CHECK-IN 5.0.5");
-                                if (ckinOffset > 0) { ckinOffset = 9; } else { ckinOffset = 13; }
-                                startPosition = fileText.IndexOf("COMMENTS:")+ckinOffset;
+                                // if (ckinOffset > 0) { ckinOffset = 9; } else { ckinOffset = 13; }
+                                // startPosition = fileText.IndexOf("COMMENTS:")+ckinOffset;
+                                startPosition = fileText.IndexOf("COMMENTS:")+9;
                                 endPosition = fileText.IndexOf("----------", startPosition)-1;
                             }
 
@@ -479,6 +506,10 @@ class Winlink_Checkins
                                     // startPosition = forwarded+59;
                                     startPosition = fileText.IndexOf("SUBJECT:", forwarded)+9;
                                     startPosition = fileText.IndexOf("\r\n", startPosition)+4;
+                                    // look for a second Subject tag
+                                    startPosition = fileText.IndexOf("SUBJECT:", forwarded)+9;
+                                    startPosition = fileText.IndexOf("\r\n", startPosition)+4;
+
                                 }
                                 endPosition = fileText.IndexOf("--BOUNDARY", startPosition)-1;
                             }
@@ -503,29 +534,35 @@ class Winlink_Checkins
                             if (len < 0)
                             {
                                 Console.Write("endPostion is less than startPosition in: "+file+"\n");
-                                Console.Write("Break at line 473ish. Press enter to close.");
+                                Console.Write("Break at line 522ish. Press enter to close.");
                                 input = Console.ReadLine();
                                 break;
                             }
 
-                            string checkIn = fileText.Substring(startPosition, len);
-                            checkIn = checkIn.Replace("=20", "")
+                            string msgField = fileText.Substring(startPosition, len);
+                            msgField = msgField
+                                .Replace("=20", "")
                                 .Replace("=0A", "")
                                 .Replace("=0", "")
                                 .Replace("16. CONTACT INFO:", ",")
+                                .Trim()
                                 .Replace("  ", " ")
                                 .Replace("  ", " ")
+                                //.Replace(".", "") this causes problems with decimal band freq
                                 .Replace(", ", ",")
-                                .Replace(", ", ",")
+                                .Replace("[NO CHANGES OR EDITING OF THIS MESSAGE ARE ALLOWED]", "")
+                                .Replace("[MESSAGE RECEIPT REQUESTED]","")
                                 .Replace(" ,", ",")
-                                .Replace("\n", ", ")
-                                .Replace("\r", "")
                                 .Replace("\"", "")
                                 .Trim()
-                                .Trim(',');
-                            string msgField = checkIn.
-                                Replace(" ,", ",")                                
-                                .Trim()+",";
+                                //.Trim(',')
+                                +",";
+                            checkIn = msgField
+                                //.Replace(" ,", ",")    
+                                //.Trim()
+                                //.Trim(',')
+                                //.Trim()+",";
+                                ;
 
                             // Create a Regex object with the pattern
                             Regex regexCallSign = new Regex(callSignPattern, RegexOptions.IgnoreCase);
@@ -605,7 +642,48 @@ class Winlink_Checkins
                                     }
                                     netAckString2.Append(checkIn+";");
                                     // find message, format for csv file, and save
-                                    csvString.Append(xSource+","+latitude+","+longitude+","+locType+","+msgField+"\r\n");
+                                    var msgFieldStart = msgField.IndexOf("\r\n");
+                                    string notFirstLine = "";
+                                    if (msgFieldStart > 0) 
+                                    {
+                                        len = msgField.Length - msgFieldStart;
+                                        if (len > 0) 
+                                        { 
+                                            notFirstLine = msgField.Substring(msgFieldStart,len);
+                                            notFirstLine = notFirstLine.Replace("\n", ", ")
+                                            .Replace("\r", "")
+                                            //.Replace("73","")
+                                            .Trim()
+                                            ;
+                                            startPosition = notFirstLine.IndexOf("73");
+                                            if (startPosition >0)
+                                            {
+                                                endPosition = notFirstLine.IndexOf("\r\n", startPosition)+2;
+                                                len = endPosition - startPosition;
+                                                if (len > 0)
+                                                {
+                                                    notFirstLine = notFirstLine.Substring(0, startPosition)+notFirstLine.Substring(endPosition);
+                                                }
+                                                else
+                                                { 
+                                                    notFirstLine = notFirstLine.Substring(0, startPosition);
+                                                }
+                                            }
+                                            notFirstLine = notFirstLine
+                                                .Replace(", ,",",")
+                                                .Trim()
+                                                .Trim(',')
+                                                .Trim()
+                                                .Trim(',')
+
+                                                ;
+                                            if (notFirstLine.Length > 0) { addonString.Append(checkIn + ": " + notFirstLine+"\r\n"); }
+                                        } 
+                                    }
+                                    
+                                    msgField = msgField.Replace("\r\n", ",");
+                                    msgFieldNumbered = fillFieldNum(msgField);
+                                    csvString.Append(xSource+","+latitude+","+longitude+","+locType+","+msgFieldNumbered+"\r\n");
 
                                     // find the band if it's where it's supposed to be
                                     bandStr ="";
@@ -613,23 +691,34 @@ class Winlink_Checkins
                                     // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
                                     startPosition = IndexOfNthSB(msgField, (char)44, 0, 6)+1;
                                     if (startPosition > 0) { endPosition = IndexOfNthSB(msgField, (char)44, 0, 7); len = endPosition-startPosition; }
-                                    if (len > 0 && msgField.Length >= len) 
+                                    if (len > 0 && msgField.Length >= len)
                                     {
                                         bandStr=  msgField.Substring(startPosition, len)
                                             .ToLower()
+                                            .Replace("5.8ghz", "5cm")
+                                            .Replace("packet", "")
+                                            .Replace(".", "")
                                             .Replace(" ", "")
                                             .Replace(" meters", "m")
-                                            .Replace("meters","m")
-                                            .Replace("meter", "m")
                                             .Replace(" meter", "m")
+                                            .Replace("meters", "m")
+                                            .Replace("meter", "m")
                                             .Replace("vhf", "2m")
+                                            .Replace("uhf", "70cm")
                                             .Replace("(", "")
                                             .Replace(")", "")
                                             .Replace("n/a", "Telnet")
-                                            .Replace("na", "Telnet")
+                                            .Replace("na", "Telnet")                                                                                        
+                                            .Replace("5ghz", "5cm")
+                                            .Replace("73m", "80m")
+                                            .Replace("75m", "80m")
+                                            .Replace("telnet", "Telnet")
+                                            .Trim()
+                                            // .Replace("packet", "")
                                             ;
-                                        if (bandStr.IndexOf("m") == -1 && bandStr != "telnet")
+                                        if (bandStr.IndexOf("m") == -1 && bandStr != "Telnet" && bandStr != "vara")
                                         {
+                                            // if the band is a simple number (no cm or m), add m to it for meters
                                             if (bandStr.IndexOf("ghz") == -1) { bandStr = bandStr+"m"; }
                                         }
                                         if (bandStr =="telnet") { bandStr = textInfo.ToTitleCase(bandStr.ToLower()); }
@@ -638,18 +727,9 @@ class Winlink_Checkins
                                         {
                                             case "Telnet":
                                                 break;
-                                            case "telnet":
-                                                bandStr = "Telnet";
-                                                break;
-                                            case "telnetm":
-                                                bandStr = "Telnet";
-                                                break;
                                             case "160m":
                                                 break;
                                             case "80m":
-                                                break;
-                                            case "75m":
-                                                bandStr = "80m";
                                                 break;
                                             case "60m":
                                                 break;
@@ -681,48 +761,61 @@ class Winlink_Checkins
                                                 break;
                                             case "13cm":
                                                 break;
-                                            case "5ghz":
-                                                bandStr="5cm";
-                                                break;
                                             case "5cm":
                                                 break;
                                             case "3cm":
                                                 break;
                                             default:
-                                                //Console.WriteLine("Band is not standard for "+messageID+"  "+checkIn+": "+bandStr+" - "+ msgField+ "\r\n");
-                                                badFormatString.Append("Band is not standard for "+messageID+"  "+checkIn+": "+bandStr+" - |"+ msgField+ "|\r\n");
+                                                // Console.WriteLine("Band is not standard for "+messageID+"  "+checkIn+": "+bandStr+" - "+ msgField+ "\r\n");
+                                                msgFieldNumbered = msgField;
+                                                msgFieldNumbered = fillFieldNum(msgFieldNumbered);
+                                                badBandString.Append("\tBad Band: "+messageID+" - "+checkIn+": "+bandStr+" - |"+ msgFieldNumbered + "|\r\n");
+                                                badBandCt++;
                                                 break;
                                         }
+                                        modeStr ="";
+                                        len =0;
+                                        // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
+                                        startPosition = IndexOfNthSB(msgField, (char)44, 0, 7)+1;
+                                        if (startPosition > 0) { endPosition = IndexOfNthSB(msgField, (char)44, 0, 8); len = endPosition-startPosition; }
                                     }
-                                    // debug Console.Write("bandStr final=|"+bandStr+"|  \r\n");
-
-                                    // find the mode if it's where it's supposed to be
-                                    modeStr ="";
-                                    len =0;
-                                    // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
-                                    startPosition = IndexOfNthSB(msgField, (char)44, 0, 7)+1;
-                                    if (startPosition > 0) { endPosition = IndexOfNthSB(msgField, (char)44, 0, 8); len = endPosition-startPosition; }
                                     if (len > 0 && msgField.Length >= len)
                                     {
                                         modeStr=  msgField.Substring(startPosition, len)
                                             .ToUpper()
-                                            .Replace("TELNET","SMTP")
+                                            .Replace("WINLINK","")
                                             .Replace("AREDN", "MESH")
+                                            .Replace("AX.25", "PACKET")
                                             .Replace("WINLINK", "")
                                             .Replace("(", "")
+                                            .Replace("ARDOP HF","ARDOP")
+                                            .Replace("VHF VARA","VARA FM")
+                                            .Replace("VARAFM","VARA FM")
+                                            .Replace("VERA", "VARA")
+                                            .Replace("HF ARDOP", "ARDOP")
                                             .Replace(")", "")
                                             .Replace("-", " ")
+                                            .Replace("=20","")
+                                            //.Replace("HF", "VARA HF")
+                                            .Replace("VHF PACKET", "PACKET")
+                                            .Replace("TELNET", "SMTP")
                                             .Trim();
-                                        //if (modeStr == "TELNET") { modeStr = "SMTP"; }
+                                        if (modeStr.IndexOf("MESH") > 0) { modeStr = "MESH"; }
                                         // {
                                         //     if (modeStr.IndexOf("ghz") == -1) { modeStr = modeStr+"m"; }
                                         // }
-                                        // if (modeStr =="telnet") { modeStr = textInfo.ToTitleCase(modeStr.ToLower()); }
+                                        if (bandStr =="Telnet") { modeStr = "SMTP"; }
                                         modeCt++;
+                                    }
+                                    else
+                                    {
+                                        //if (bandStr == "2m" || bandStr == "70cm") { modeStr = "VHF"; }
+                                        if (bandStr == "Telnet") { modeStr = "SMTP"; }
                                     }
                                     switch (modeStr)
                                     {
                                         case "SMTP":
+                                            bandStr = "Telnet";
                                             break;
                                         case "PACKET":
                                             break;
@@ -733,6 +826,13 @@ class Winlink_Checkins
                                             modeStr = "PACKET";
                                             break;
                                         case "ARDOP":
+                                            break;
+                                        case "VARA":
+                                            if (bandStr =="2m" || bandStr =="70cm") { modeStr = "VARA FM"; }
+                                            else { modeStr = "VARA HF"; }
+                                            break;
+                                        case "FM":
+                                            modeStr = "VARA FM";
                                             break;
                                         case "FM VARA":
                                             modeStr = "VARA FM";
@@ -745,6 +845,9 @@ class Winlink_Checkins
                                         case "VARAHF":
                                             modeStr = "VARA HF";
                                             break;
+                                        case "HF":
+                                            modeStr = "VARA HF";
+                                            break;
                                         case "HF VARA":
                                             modeStr = "VARA HF";
                                             break;
@@ -755,6 +858,7 @@ class Winlink_Checkins
                                         case "INDIUM":
                                             break;
                                         case "MESH":
+                                            meshCt++;
                                             break;
                                         case "APRS":
                                             break;
@@ -765,8 +869,11 @@ class Winlink_Checkins
                                             modeStr = "PACKET";
                                             break;
                                         default:
-                                            //Console.WriteLine("Mode is not standard for "+messageID+"  "+checkIn+": "+modeStr+" - "+ msgField+ "\r\n");
-                                            badFormatString.Append("Mode is not standard for "+messageID+"  "+checkIn+": "+modeStr+" - |"+ msgField+ "|\r\n");
+                                            //Console.WriteLine("Bad mode: "+messageID+"  "+checkIn+": "+modeStr+" - "+ msgField+ "\r\n");
+                                            msgFieldNumbered = msgField;
+                                            msgFieldNumbered = fillFieldNum(msgFieldNumbered);
+                                            badModeString.Append("\tBad mode: "+messageID+" - "+checkIn+": "+modeStr+" -  |  "+ msgFieldNumbered+ "\r\n");
+                                            badModeCt++;
                                             break;
                                     }
 
@@ -853,11 +960,21 @@ class Winlink_Checkins
             logWrite.WriteLine("Did You Feel It: "+dyfiCt);
             logWrite.WriteLine("RRI Welfare Radiogram: "+rriCt);
             logWrite.WriteLine("Medical Incident: "+miCt);
-            logWrite.WriteLine("Total Plain and other Checkins: "+(ct-localWeatherCt-severeWeatherCt-incidentStatusCt-icsCt-ckinCt-damAssessCt-fieldSitCt-quickHWCt-dyfiCt-rriCt-qwmCt-miCt)+"\r\n");
+            logWrite.WriteLine("APRS checkins: "+aprsCt);
+            logWrite.WriteLine("Mesh checkins: "+meshCt);
+            logWrite.WriteLine("Total Plain and other Checkins: "+(ct-localWeatherCt-severeWeatherCt-incidentStatusCt-icsCt-ckinCt-damAssessCt-fieldSitCt-quickHWCt-dyfiCt-rriCt-qwmCt-miCt-aprsCt-meshCt)+"\r\n");
             logWrite.WriteLine("Total Checkins with a geolocation: "+mapCt);
             logWrite.WriteLine("Total Checkins with something in the band field: "+bandCt);
             logWrite.WriteLine("Total Checkins with something in the mode field: "+modeCt);
-            logWrite.WriteLine("msgField not properly formatted for the following: \r\n"+badFormatString);
+            logWrite.WriteLine("\r\n++++++++++++++++\r\nmsgField not properly formatted for the following: \r\n-------------------------------");
+            logWrite.Write(badBandString);
+            logWrite.WriteLine("Checkins with a bad band field: "+badBandCt+"\r\n");
+            logWrite.Write(badModeString);
+            logWrite.WriteLine("Checkins with a bad mode field: "+badModeCt);
+            logWrite.WriteLine(noGPSString);
+            logWrite.WriteLine("++++++++++++++++\r\nAdditional Comments\r\n-------------------------------");
+            logWrite.Write(addonString);
+
         }
         Console.WriteLine("Done!\nThere were "+ct+" checkins. \nThe output checkins.txt can be found in the folder \n"+currentFolder);
         Console.WriteLine("\n\nPress enter to continue.");
@@ -1001,4 +1118,26 @@ class Winlink_Checkins
         lon = Math.Round(lon,6);
         return (lat, lon);
     }
+    static string fillFieldNum(string input)
+    {
+        // find the first 8 commas and append a field number to each occurence
+        var ct = 1;
+        var startPosition = 0;
+        // Console.WriteLine("input before: "+input);
+        while (ct < 9)
+        {
+            startPosition = input.IndexOf(",", startPosition);
+            if (startPosition > 0)
+            {
+                input = input.Insert(startPosition, " "+ct);
+                // Console.WriteLine("input during: "+input);
+            }
+            else { break; }
+            ct++;
+            startPosition=startPosition+3;
+        }
+        // Console.WriteLine("input after: "+input);
+        return input.Trim(',');        
+    }
+
 }
