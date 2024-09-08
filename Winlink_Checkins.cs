@@ -24,12 +24,14 @@ using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
+using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Globalization;
 using System.Runtime.Intrinsics.X86;
+using System.Xml.Linq;
 
 
 class Winlink_Checkins
@@ -39,6 +41,7 @@ class Winlink_Checkins
         // Get the start date and end date from the user.
         DateTime startDate = DateTime.Today;
         DateTime endDate = DateTime.Today;
+        string utcDate = DateTime.UtcNow.ToString("yyyy/MM/dd HH:mm:ss");
         //DateTime date;
         bool isValid = false;
         string input;
@@ -86,6 +89,7 @@ class Winlink_Checkins
         // Look for roster.txt in the folder. If it exists, get the first (and only)
         // row for comparison down below
         string rosterFile = applicationFolder+"\\roster.txt";
+        string xmlFile = applicationFolder+"\\Winlink_Import.xml";
         // writeString variables to go in the output files
         StringBuilder netCheckinString = new StringBuilder();
         StringBuilder netAckString2 = new StringBuilder();
@@ -112,6 +116,20 @@ class Winlink_Checkins
         noGPSString.Append ( "\r\n++++++++\r\nThese had neither GPS data nor Maidenhead Grids\r\n-------------------------\r\n");
         Random rnd = new Random();
         TextInfo textInfo = new CultureInfo("en-US", false).TextInfo;
+        // Create root XML document
+        XDocument xmlDoc = new XDocument(new XElement("WinlinkMessages"));
+        XElement messageElement = new XElement
+            ("export_parameters",
+                new XElement("xml_file_version", "1.0"),
+                new XElement("winlink_express_version", "1.7.17.0"),
+                new XElement("callsign", "KB7WHO")
+            );
+        xmlDoc.Root.Add(messageElement);
+
+        messageElement = new XElement("message_list", "");
+        xmlDoc.Root.Add(messageElement);
+        
+
 
         if (File.Exists(rosterFile))
         {
@@ -159,9 +177,9 @@ class Winlink_Checkins
         var badBandCt = 0;
         var badModeCt = 0;
         string locType = "";
-        // string latitude = "";
-        // string longitude = "";
         string xSource = "";
+        double latitude = 0;
+        double longitude = 0;
         
         // Select files with an extension of mime from the current folder.
         var files = Directory.GetFiles(currentFolder, "*.mime")
@@ -337,54 +355,7 @@ class Winlink_Checkins
 
                         if (subjText.Contains(netName))
                         {
-                            // get x-location information
-                            // var xLoc = fileText.IndexOf("X-LOCATION: ");
-                            // latitude =""; longitude = ""; locType =""; xSource ="";
-                            // if (xLoc > 0)
-                            // {
-                            // startPosition = xLoc+12;
-                            // endPosition = fileText.IndexOf(",", startPosition);
-                            // len = endPosition - startPosition;
-                            // if (len > 0) { latitude = fileText.Substring(startPosition, len); }
-                            // startPosition = endPosition+2;
-                            // endPosition = fileText.IndexOf(" ", startPosition);
-                            // len = endPosition - startPosition;
-                            // if (len > 0) { longitude = fileText.Substring(startPosition, len); }
-                            // // get location type
-                            // startPosition = endPosition+1;
-                            // endPosition = fileText.IndexOf(")", startPosition)+1;
-                            // len = endPosition - startPosition;
-                            // if (len > 0) { locType = fileText.Substring(startPosition, len); }
-                            // // Console.Write("Latitude ="+latitude+   "    Longitude = "+longitude+"    Type = " + locType+"\r\n");
-                            // }
-                            // 
-                           
-                            // Extract latitude and longitude
-                            if (ExtractCoordinates(fileText, out double latitude, out double longitude))
-                            {
-                                // Console.WriteLine(messageID+" latitude: "+latitude+" longitude: "+longitude);                                
-                            }
-                            else
-                            {
-                                // no valid GPS coordinates found, look for a maidenhead grid
-                                string maidenheadGrid = ExtractMaidenheadGrid(fileText);
-                                if (!string.IsNullOrEmpty(maidenheadGrid))
-                                {
-                                    // Console.WriteLine($"Maidenhead Grid: {maidenheadGrid}");
-                                    // Convert Maidenhead to GPS coordinates
-                                    (latitude, longitude) = MaidenheadToGPS(maidenheadGrid);
-                                    // Console.WriteLine($"No GPS coords found, using Maidenhead Grid: {maidenheadGrid}"+$". From Maidenhead Grid Latitude: {latitude}"+$"  Longitude: {longitude}");
-                                }
-                                else
-                                {
-                                    // No valid Maidenhead grid found either, make up something in the middle of the Atlantic
-                                    double locChange = Math.Round(rnd.NextDouble()*10, 6);
-                                    latitude = Math.Round((27.187512+locChange), 6);
-                                    longitude= Math.Round((-60.144742+locChange), 6);
-                                    // Console.WriteLine("No valid grid and no GPS coordinates found in: "+messageID+" latitude set to: "+latitude+" longitude set to: "+longitude);
-                                    noGPSString.Append("\t"+messageID+"- - "+checkIn+": latitude set to: "+latitude+" longitude set to: "+longitude+"\r\n");
-                                }
-                            }
+                            
                             // get x-Source if available XXXX
                             var xSrc = fileText.IndexOf("X-SOURCE: ");
                             if (xSrc > 0)
@@ -680,13 +651,47 @@ class Winlink_Checkins
                                             if (notFirstLine.Length > 0) { addonString.Append(checkIn + ": " + notFirstLine+"\r\n"); }
                                         } 
                                     }
-                                    
+                                    // Extract latitude and longitude
+                                    //skip past the messageID because sometimes the regex for coordinates matches it
+                                    startPosition = fileText.IndexOf("MESSAGE-ID:");
+                                    startPosition = fileText.IndexOf("\r\n",startPosition)+2;
+                                    len = fileText.Length - startPosition;
+                                    if (len>0)
+                                    {
+                                        if (ExtractCoordinates(fileText.Substring(startPosition), out latitude, out longitude))
+                                        {
+                                            // Console.WriteLine(messageID+" latitude: "+latitude+" longitude: "+longitude);                                
+                                        }
+                                        else
+                                        {
+                                            // no valid GPS coordinates found, look for a maidenhead grid
+                                            string maidenheadGrid = ExtractMaidenheadGrid(fileText);
+                                            if (!string.IsNullOrEmpty(maidenheadGrid))
+                                            {
+                                                // Console.WriteLine($"Maidenhead Grid: {maidenheadGrid}");
+                                                // Convert Maidenhead to GPS coordinates
+                                                (latitude, longitude) = MaidenheadToGPS(maidenheadGrid);
+                                                // Console.WriteLine($"No GPS coords found, using Maidenhead Grid: {maidenheadGrid}"+$". From Maidenhead Grid Latitude: {latitude}"+$"  Longitude: {longitude}");
+                                            }
+                                            else
+                                            {
+                                                // No valid Maidenhead grid found either, make up something in the middle of the Atlantic
+                                                double locChange = Math.Round(rnd.NextDouble()*10, 6);
+                                                latitude = Math.Round((27.187512+locChange), 6);
+                                                longitude= Math.Round((-60.144742+locChange), 6);
+                                                // Console.WriteLine("No valid grid and no GPS coordinates found in: "+messageID+" latitude set to: "+latitude+" longitude set to: "+longitude);
+                                                noGPSCt++;
+                                                noGPSString.Append("\t"+messageID+"- - "+checkIn+": latitude set to: "+latitude+" longitude set to: "+longitude+"\r\n");
+                                            }
+                                        }
+                                    }
                                     msgField = msgField.Replace("\r\n", ",");
                                     msgFieldNumbered = fillFieldNum(msgField);
                                     csvString.Append(xSource+","+latitude+","+longitude+","+locType+","+msgFieldNumbered+"\r\n");
 
                                     // find the band if it's where it's supposed to be
                                     bandStr ="";
+                                    // modeStr = "";
                                     len =0;
                                     // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
                                     startPosition = IndexOfNthSB(msgField, (char)44, 0, 6)+1;
@@ -773,12 +778,12 @@ class Winlink_Checkins
                                                 badBandCt++;
                                                 break;
                                         }
-                                        modeStr ="";
-                                        len =0;
-                                        // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
-                                        startPosition = IndexOfNthSB(msgField, (char)44, 0, 7)+1;
-                                        if (startPosition > 0) { endPosition = IndexOfNthSB(msgField, (char)44, 0, 8); len = endPosition-startPosition; }
                                     }
+                                    modeStr ="";
+                                    len =0;
+                                    // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
+                                    startPosition = IndexOfNthSB(msgField, (char)44, 0, 7)+1;
+                                    if (startPosition > 0) { endPosition = IndexOfNthSB(msgField, (char)44, 0, 8); len = endPosition-startPosition; }
                                     if (len > 0 && msgField.Length >= len)
                                     {
                                         modeStr=  msgField.Substring(startPosition, len)
@@ -886,6 +891,55 @@ class Winlink_Checkins
                                         mapString.Append(xSource+","+latitude+","+longitude+","+bandStr+","+modeStr+"\r\n");
                                         mapCt++;
                                     }
+
+                                    // xml data
+                                    XElement message_list = xmlDoc.Descendants("message_list").FirstOrDefault();
+                                    message_list.Add(new XElement("message", 
+                                        new XElement("id", messageID),
+                                        new XElement("foldertype", "Global"),
+                                        new XElement("folder", "GLAWN"),
+                                        new XElement("subject", "GLAWN acknowledgement ", DateTime.UtcNow.ToString("yyyy-MM-dd")),
+                                        new XElement("time", utcDate),
+                                        new XElement("sender", "KB7WHO"),
+                                        new XElement("To", xSource),
+                                        new XElement("rmsoriginator", ""),
+                                        new XElement("rmsdestination", ""),
+                                        new XElement("rmspath", ""),
+                                        new XElement("location", "43.845831N, 111.745744W (GPS)"),
+                                        new XElement("csize", ""),
+                                        new XElement("messageserver", ""),
+                                        new XElement("precedence", "2"),
+                                        new XElement("peertopeer", "False"),
+                                        new XElement("routingflag", ""),
+                                        new XElement("source", "KB7WHO"),
+                                        new XElement("unread", "True"),
+                                        new XElement("flags", "0"),
+                                        new XElement("messageoptions", "False|False|||||"),
+                                        new XElement
+                                        ("mime", "Date: "+utcDate+"\r\n"+
+                                            "From: GLAWN@winlink.org\r\n"+
+                                            "Subject: GLAWN acknowledgement ", utcDate+"\r\n"+
+                                            "To: "+checkIn+"\r\n"+
+                                            "Message-ID: "+messageID+"\r\n"+
+                                            "X-Source: KB7WHO\r\n"+
+                                            "X-Location: 43.845831N, 111.745744W(GPS) \r\n"+
+                                            "MIME-Version: 1.0\r\n"+
+                                            "\r\n"+
+                                            "Content-Type: text/plain; charset=\"iso-8859-1\"\r\n"+
+                                            "Content-Transfer-Encoding: quoted-printable\r\n"+
+                                            "\r\n"+
+                                            "Thank you for checking in to the GLAWN. This is a copy of your message and extracted data. \r\n"+
+                                            "Message: "+msgFieldNumbered+"\r\n"+
+                                            "Extracted Data:\r\n" +
+                                                "   Lattitude: "+latitude+"\r\n"+
+                                                "   Longitude: "+longitude+"\r\n"+
+                                                "   Band: "+bandStr+"\r\n"+
+                                                "   Mode: "+modeStr+"\r\n"                                                        
+                                        )                                            
+                                    ));
+                                    
+                                    // Add the message message_list
+                                    xmlDoc.Root.Add(messageElement);
                                 }
                                 junk = 0; // just so i could put a debug here
                             }
@@ -932,6 +986,7 @@ class Winlink_Checkins
             logWrite.WriteLine(netAckString2+"\r\n");
             csvWrite.WriteLine(csvString);
             mapWrite.WriteLine(mapString);
+            xmlDoc.Save(xmlFile);
 
             if (duplicates.Length==0)
             {
@@ -963,7 +1018,8 @@ class Winlink_Checkins
             logWrite.WriteLine("APRS checkins: "+aprsCt);
             logWrite.WriteLine("Mesh checkins: "+meshCt);
             logWrite.WriteLine("Total Plain and other Checkins: "+(ct-localWeatherCt-severeWeatherCt-incidentStatusCt-icsCt-ckinCt-damAssessCt-fieldSitCt-quickHWCt-dyfiCt-rriCt-qwmCt-miCt-aprsCt-meshCt)+"\r\n");
-            logWrite.WriteLine("Total Checkins with a geolocation: "+mapCt);
+            //var totalValidGPS = mapCt-noGPSCt;
+            logWrite.WriteLine("Total Checkins with a geolocation: "+(mapCt-noGPSCt));
             logWrite.WriteLine("Total Checkins with something in the band field: "+bandCt);
             logWrite.WriteLine("Total Checkins with something in the mode field: "+modeCt);
             logWrite.WriteLine("\r\n++++++++++++++++\r\nmsgField not properly formatted for the following: \r\n-------------------------------");
@@ -971,7 +1027,7 @@ class Winlink_Checkins
             logWrite.WriteLine("Checkins with a bad band field: "+badBandCt+"\r\n");
             logWrite.Write(badModeString);
             logWrite.WriteLine("Checkins with a bad mode field: "+badModeCt);
-            logWrite.WriteLine(noGPSString);
+            logWrite.WriteLine(noGPSString+"\r\nTotal without a location: "+noGPSCt);
             logWrite.WriteLine("++++++++++++++++\r\nAdditional Comments\r\n-------------------------------");
             logWrite.Write(addonString);
 
@@ -1052,7 +1108,7 @@ class Winlink_Checkins
         // Initialize output variables
         latitude = 0;
         longitude = 0;
-
+        
         // Define the regular expression for latitude and longitude (with optional N/S/E/W directions)
         Regex regex = new Regex(@"([-+]?[0-9]*\.?[0-9]+)\s*[°]?\s*([NS]),?\s*([-+]?[0-9]*\.?[0-9]+)\s*[°]?\s*([EW])", RegexOptions.IgnoreCase);
 
