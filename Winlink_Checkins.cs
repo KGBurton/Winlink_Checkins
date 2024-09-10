@@ -122,7 +122,9 @@ class Winlink_Checkins
             ("export_parameters",
                 new XElement("xml_file_version", "1.0"),
                 new XElement("winlink_express_version", "1.7.17.0"),
-                new XElement("callsign", "KB7WHO")
+                // for testing
+                // new XElement("callsign", "KB7WHO")
+                new XElement("callsign", "GLAWN")
             );
         xmlDoc.Root.Add(messageElement);
 
@@ -174,6 +176,7 @@ class Winlink_Checkins
         var aprsCt = 0;
         var meshCt = 0;
         var noGPSCt = 0;
+        var noGPSFlag = 0;
         var badBandCt = 0;
         var badModeCt = 0;
         string locType = "";
@@ -681,6 +684,8 @@ class Winlink_Checkins
                                                 longitude= Math.Round((-60.144742+locChange), 6);
                                                 // Console.WriteLine("No valid grid and no GPS coordinates found in: "+messageID+" latitude set to: "+latitude+" longitude set to: "+longitude);
                                                 noGPSCt++;
+                                                noGPSFlag++;
+                                                msgField = msgField+",No Location Data Found in message";
                                                 noGPSString.Append("\t"+messageID+"- - "+checkIn+": latitude set to: "+latitude+" longitude set to: "+longitude+"\r\n");
                                             }
                                         }
@@ -721,6 +726,7 @@ class Winlink_Checkins
                                             .Trim()
                                             // .Replace("packet", "")
                                             ;
+                                        if (bandStr.IndexOf("vhf") > 0) { bandStr = "2m"; }
                                         if (bandStr.IndexOf("m") == -1 && bandStr != "Telnet" && bandStr != "vara")
                                         {
                                             // if the band is a simple number (no cm or m), add m to it for meters
@@ -893,14 +899,24 @@ class Winlink_Checkins
                                     }
 
                                     // xml data
+                                    var reminderTxt = "";
+                                    if (noGPSFlag > 0 || bandStr =="" || modeStr =="") { reminderTxt = "\r\nRecommended format reminder: xxNxxx (1), name (2), city (3), county (4), STate (5), country (6), band (7), Mode (8), grid (9)\r\nExample: xxNxxx, Greg, Sugar City, Madison, ID, USA, 70cm, VARA FM, DN43du\r\n"; } else { reminderTxt = "\r\nPerfect Message!\r\n"; }
+                                    noGPSFlag = 0;
+                                    // the old message ID will destroy stuff in winlink if it is the same when trying to post
+                                    // create a new message ID by rearranging the old one
+                                    string newMessageID = messageID;
+                                    newMessageID =  ScrambleWord(newMessageID);
+                                    // Console.WriteLine("before: "+messageID+   "    after: "+newMessageID);
                                     XElement message_list = xmlDoc.Descendants("message_list").FirstOrDefault();
                                     message_list.Add(new XElement("message", 
-                                        new XElement("id", messageID),
-                                        new XElement("foldertype", "Global"),
-                                        new XElement("folder", "GLAWN"),
+                                        new XElement("id", newMessageID),
+                                        new XElement("foldertype", "Fixed"),
+                                        new XElement("folder", "Outbox"),
                                         new XElement("subject", "GLAWN acknowledgement ", DateTime.UtcNow.ToString("yyyy-MM-dd")),
                                         new XElement("time", utcDate),
-                                        new XElement("sender", "KB7WHO"),
+                                        new XElement("sender", "GLAWN"), 
+                                        // for testing
+                                        // new XElement("sender", "KB7WHO"),
                                         new XElement("To", xSource),
                                         new XElement("rmsoriginator", ""),
                                         new XElement("rmsdestination", ""),
@@ -911,30 +927,41 @@ class Winlink_Checkins
                                         new XElement("precedence", "2"),
                                         new XElement("peertopeer", "False"),
                                         new XElement("routingflag", ""),
-                                        new XElement("source", "KB7WHO"),
+                                        // for testing
+                                        // new XElement("source", "KB7WHO"),
+                                        new XElement("source", "GLAWN"),
                                         new XElement("unread", "True"),
                                         new XElement("flags", "0"),
                                         new XElement("messageoptions", "False|False|||||"),
                                         new XElement
                                         ("mime", "Date: "+utcDate+"\r\n"+
                                             "From: GLAWN@winlink.org\r\n"+
+                                            // for testing
+                                            // "From: KB7WHO@winlink.org\r\n"+
                                             "Subject: GLAWN acknowledgement ", utcDate+"\r\n"+
                                             "To: "+checkIn+"\r\n"+
-                                            "Message-ID: "+messageID+"\r\n"+
+                                            "Message-ID: "+newMessageID+"\r\n"+
+                                            // Can't edit if not from my call sign
+                                            // "X-Source: GLAWN\r\n"+
+                                            // for testing
                                             "X-Source: KB7WHO\r\n"+
                                             "X-Location: 43.845831N, 111.745744W(GPS) \r\n"+
                                             "MIME-Version: 1.0\r\n"+
                                             "\r\n"+
-                                            "Content-Type: text/plain; charset=\"iso-8859-1\"\r\n"+
-                                            "Content-Transfer-Encoding: quoted-printable\r\n"+
+                                            "Test of the automatic, personalized acknowledgement\r\n"+
                                             "\r\n"+
-                                            "Thank you for checking in to the GLAWN. This is a copy of your message and extracted data. \r\n"+
+                                            "Thank you for checking in to the GLAWN. This is a copy of your message (with numbered fields) and extracted data. \r\n"+
                                             "Message: "+msgFieldNumbered+"\r\n"+
+                                            reminderTxt+"\r\n"+                                           
                                             "Extracted Data:\r\n" +
                                                 "   Lattitude: "+latitude+"\r\n"+
                                                 "   Longitude: "+longitude+"\r\n"+
                                                 "   Band: "+bandStr+"\r\n"+
-                                                "   Mode: "+modeStr+"\r\n"                                                        
+                                                "   Mode: "+modeStr+"\r\n"+
+                                                "\r\nGLAWN Current Map: https://tinyurl.com/GLAWN-Map\r\n"+
+                                                "GLAWN Checkins Report: https://tinyurl.com/Checkins-Report\r\n"+
+                                                "checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins\r\n"+
+                                                "Mapfile.csv: https://tinyurl.com/Current-CSV-mapfile\r\n"
                                         )                                            
                                     ));
                                     
@@ -1180,7 +1207,7 @@ class Winlink_Checkins
         var ct = 1;
         var startPosition = 0;
         // Console.WriteLine("input before: "+input);
-        while (ct < 9)
+        while (ct < 10)
         {
             startPosition = input.IndexOf(",", startPosition);
             if (startPosition > 0)
@@ -1195,5 +1222,31 @@ class Winlink_Checkins
         // Console.WriteLine("input after: "+input);
         return input.Trim(',');        
     }
-
+    public string Reverse(string text)
+    {
+        char[] cArray = text.ToCharArray();
+        string reverse = String.Empty;
+        for (int i = cArray.Length - 1; i > -1; i--)
+        {
+            reverse += cArray[i];
+        }
+        return reverse;
+    }
+    public static string ScrambleWord(string word)
+    {
+        char[] chars = new char[word.Length];
+        Random rand = new Random(10000);
+        int index = 0;
+        while (word.Length > 0)
+        { // Get a random number between 0 and the length of the word. 
+            int next = rand.Next(0, word.Length - 1);
+            // Take the character from the random position 
+            // and add to our char array. 
+            chars[index] = word[next];                
+            // Remove the character from the word. 
+            word = word.Substring(0, next) + word.Substring(next + 1);
+            ++index;
+        }
+        return new String(chars);
+    }
 }
