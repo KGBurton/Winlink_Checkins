@@ -8,15 +8,22 @@
 // is it a forwarded message? be sure to get the correc callsign
 // is the callsign in the MSG field? if not try the from field, if not record and don't count
 //      REGEX pattern to find the FCC callsign is \b[A-Z]{1,2}\d[A-Z]{1,3}\b for us only
-//      \b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b for almost all international and US
+//      \b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b for almostall international and US
 //      see https://regex101.com/r/gS6qG8/1 for a regex tester/editor. This is string to test in 
 //      the editor: Ken, AE0MW, this, is, a test. 4F1PUZ 4G1CCH AX3GAMES 4D71 4X130RISHON 9N38 AX3GAMES BV100 DA2MORSE  DB50FIRAC DL50FRANCE FBC5AGB FBC5CWU FBC5LMJ FBC5NOD FBC5YJ FBC6HQP GB50RSARS HA80MRASZ  HB9STEVE HG5FIRAC HG80MRASZ II050SCOUT IP1METEO J42004A J42004Q LM1814 LM2T70Y LM9L40Y LM9L40Y/P OEM2BZL OEM3SGU OEM3SGU/3 OEM6CLD OEM8CIQ OM2011GOOOLY ON1000NOTGER ON70REDSTAR PA09SHAPE PA65VERON PA90CORUS PG50RNARS PG540BUFFALO S55CERKNO TM380 TX9 TYA11 U5ARTEK/A V6T1 VI2AJ2010 VI2FG30 VI4WIP50 VU3DJQF1 VX31763 WD4 XUF2B YI9B4E YO1000LEANY ZL4RUGBY ZS9MADIBA
 // is it in the current roster? if not record with new checkins, save, count.
 //     Requires that roster.txt exist in the application folder. 
+// does it have location data? REGEX pattern for latitude, longitude
+// old this was deficient - needed to check and limit 90N/S and 180E/W, @"([-+]?[0-9]*\.?[0-9]+)\s*[°]?\s*([NS]),?\s*([-+]?[0-9]*\.?[0-9]+)\s*[°]?\s*([EW])"
+// new @"([-+]?([0-8]?\d(\.\d+)?|90(\.0+)?))\s*[°]?\s*([NS]),?\s*([-+]?((1[0-7]\d|\d{1,2})(\.\d+)?|180(\.0+)?))\s*[°]?\s*([EW])"
+//       ([-+]?([0-8]?\d(\.\d+)?|90(\.0+)?))\s*[°]?\s*([NS]),?\s*([-+]?((1[0-7]\d|\d{1,2})(\.\d+)?|180(\.0+)?))\s*[°]?\s*([EW])
+//  my location for testing: 43.845831N, 111.745744W
+//  REGEX pattern for Maidenhead grids: \b([A-R]{2}\d{2}[A-X]{0,2})\b, test DN43du
 // is it a duplicate? if yes, don't save or count (spreadsheet can handle duplicates)
 // what template was used? necessary to get the start and end positions correct
 // save document info, writeLines, and counts to checkins.txt;
 // write callsign and message to checkins.csv file
+// mapping resource https://github.com/RTykulsker/WinlinkMessageMapper
 
 using System;
 using System.Collections.Generic;
@@ -43,7 +50,7 @@ class Winlink_Checkins
         // Get the start date and end date from the user.
         DateTime startDate = DateTime.Today;
         DateTime endDate = DateTime.Today;
-        string utcDate = DateTime.UtcNow.ToString ("yyyy/MM/dd HH:mm:ss");
+        string utcDate = DateTime.UtcNow.ToString ("yyyy/MM/dd HH:mm:ssZ");
         //DateTime date;
         bool isValid = false;
         string input;
@@ -100,7 +107,7 @@ class Winlink_Checkins
         StringBuilder duplicates = new StringBuilder ();
         StringBuilder newCheckIns = new StringBuilder ();
         StringBuilder csvString = new StringBuilder ();
-        csvString.AppendLine ("Current GLAWN Checkins, posted: " + DateTime.Now.ToString ("yyyymmdd HH:mm:ss"));
+        csvString.AppendLine ("Current GLAWN Checkins, posted: " + utcDate);
         StringBuilder mapString = new StringBuilder ();
         mapString.Append ("CallSign,Latitude,Longitude,Band,Mode\r\n");
         StringBuilder badBandString = new StringBuilder ();
@@ -124,49 +131,54 @@ class Winlink_Checkins
         string longitudeStr = "";
         string xmlXsource = "KB7WHO";
         string delimiter = "";
-        addonString.AppendLine ("Comments from the Current Checkins\r\n-------------------------------");
+        string pointsOff = "";
+
+        addonString.AppendLine ("Comments from the Current Checkins Posted\t" + utcDate + "\r\n-------------------------------");
         noGPSString.AppendLine ("\r\n++++++++\r\nThese had neither GPS data nor Maidenhead Grids\r\n-------------------------");
         Random rnd = new Random ();
 
-        var startPosition = 0;
-        var endPosition = 0;
-        var len = 0;
-        var msgTotal = 0;
-        var skipped = 0;
+        int startPosition = 0;
+        int endPosition = 0;
+        int len = 0;
+        int msgTotal = 0;
+        int skipped = 0;
         int ct = 0;
         int dupCt = 0;
-        var newCt = 0;
-        var outOfRangeCt = 0;
-        var removalCt = 0;
-        var ackCt = 0;
-        var localWeatherCt = 0;
-        var severeWeatherCt = 0;
-        var incidentStatusCt = 0;
-        var icsCt = 0;
-        var winlinkCkinCt = 0;
-        var damAssessCt = 0;
-        var fieldSitCt = 0;
-        var quickHWCt = 0;
-        var qwmCt = 0;
-        var miCt = 0;
-        var dyfiCt = 0;
-        var rriCt = 0;
-        var junk = 0;
-        var mapCt = 0;
-        var bandCt = 0;
-        var modeCt = 0;
-        var aprsCt = 0;
-        var meshCt = 0;
-        var noGPSCt = 0;
-        var noGPSFlag = 0;
-        var badBandCt = 0;
-        var badModeCt = 0;
-        var dupeFlag = 0;
+        int newCt = 0;
+        int outOfRangeCt = 0;
+        int removalCt = 0;
+        int ackCt = 0;
+        int localWeatherCt = 0;
+        int severeWeatherCt = 0;
+        int incidentStatusCt = 0;
+        int icsCt = 0;
+        int winlinkCkinCt = 0;
+        int damAssessCt = 0;
+        int fieldSitCt = 0;
+        int quickHWCt = 0;
+        int qwmCt = 0;
+        int miCt = 0;
+        int dyfiCt = 0;
+        int rriCt = 0;
+        int junk = 0;
+        int mapCt = 0;
+        int bandCt = 0;
+        int modeCt = 0;
+        int aprsCt = 0;
+        int meshCt = 0;
+        int noGPSCt = 0;
+        int noGPSFlag = 0;
+        int badBandCt = 0;
+        int badModeCt = 0;
+        int perfectScoreCt = 0;
+        int dupeFlag = 0;
+        int score = 10;
         int rowsToSkip = 0;
         string locType = "";
         string xSource = "";
         double latitude = 0;
         double longitude = 0;
+        bool isPerfect = true;
 
         TextInfo textInfo = new CultureInfo ("en-US", false).TextInfo;
         // Create root XML document
@@ -221,7 +233,25 @@ class Winlink_Checkins
         }
         else
         {
-            Console.WriteLine (currentFolder + "\\" + rosterFile + " \n was not found!, all checkins will appear to be new.\n");
+            Console.WriteLine (currentFolder + "\\" + rosterFile + " \n was not found!, all checkins will appear to be new.\nEnter the name of the net you are checking in:");
+            isValid = false;
+            while (!isValid)
+            {
+                input = Console.ReadLine ();
+                if (input == null) { isValid = true; break; }
+                Console.WriteLine ("The net name is reguired to create a new roaster.txt file:");
+                netName = input;
+            }
+
+            isValid = false;
+            Console.WriteLine ("Enter the callsign to use as the xSource for the personalized messages:");
+            while (!isValid)
+            {
+                input = Console.ReadLine ();
+                if (input == null) { isValid = true; break; }
+                Console.WriteLine ("A callsign is reguired to create a new roaster.txt file:");
+                xmlXsource = input;
+            }
         }
 
 
@@ -233,7 +263,8 @@ class Winlink_Checkins
                 // debug Console.Write(fileDate+"\n");
                 return fileDate >= startDate && fileDate <= endDate.AddDays (1);
             });
-
+        Directory.CreateDirectory (currentFolder); // Ensures the folder exists
+        
         Console.Write ("\nMessages to process=" + files.Count () + " from folder " + currentFolder + "\n\n");
 
         // Create a text file called checkins.txt in the data folder and process the list of files.
@@ -252,9 +283,12 @@ class Winlink_Checkins
                     msgTotal++;
                     //debug Console.Write("File "+file+"\n");
                     string fileText = reader.ReadToEnd ();
+
                     fileText = fileText.ToUpper ()
-                        .Replace ("=\r\n", "")
-                        .Replace ("=20", "");
+                        // .Replace ("=\r\n", " ") some messages have this as a
+                        // line wrap character so look for it only in the checkin part of the message.
+                        .Replace ("=0A", "\r\n")
+                        .Replace ("=20", " ");
 
                     // get needed header info
                     startPosition = fileText.IndexOf ("DATE: ");
@@ -303,14 +337,9 @@ class Winlink_Checkins
                     var winlinkCkin = fileText.IndexOf ("MAP FILE NAME: WINLINK CHECK", endHeader);
                     // some people include WINLINK CHECK-IN in the subject which confuses the program
                     // into thinking this is a winlink checkin FORM!! Catch it ...
-                    if (winlinkCkin < 0)
-                    {
-                        winlinkCkin = fileText.IndexOf ("WINLINK CHECK-IN 5.0", endHeader);
-                        if (winlinkCkin < 0)
-                        {
-                            winlinkCkin = fileText.IndexOf ("WINLINK CHECK-IN\r\n0. HEADER", endHeader);
-                        }
-                    }
+                    if (winlinkCkin < 0) winlinkCkin = fileText.IndexOf ("WINLINK CHECK-IN 5.0", endHeader);
+                    if (winlinkCkin < 0) winlinkCkin = fileText.IndexOf ("WINLINK CHECK-IN \r\n0. HEADER", endHeader);
+                    if (winlinkCkin < 0) winlinkCkin = fileText.IndexOf ("WINLINK CHECK IN 2.", endHeader);
 
                     // check for odd checkin message - don't let it scan through to a binary attachment!
                     var lenBPQ = fileText.Length - 10;
@@ -368,10 +397,7 @@ class Winlink_Checkins
                         {
                             checkIn = checkIn.Replace (',', ' ');
                             // Create a Regex object with the pattern
-                            Regex regexCallSign = new Regex (callSignPattern, RegexOptions.IgnoreCase);
-                            // find the first callsign match in the checkIn string
-                            Match match = regexCallSign.Match (checkIn);
-                            if (match.Success) checkIn = match.Value;
+                            checkIn = isValidCallsign (checkIn);
                         }
                         removalString.AppendLine (checkIn + " in " + messageID + " was a removal request.");
                         removalCt++;
@@ -386,10 +412,7 @@ class Winlink_Checkins
                         {
                             checkIn = checkIn.Replace (',', ' ');
                             // Create a Regex object with the pattern
-                            Regex regexCallSign = new Regex (callSignPattern, RegexOptions.IgnoreCase);
-                            // find the first callsign match in the checkIn string
-                            Match match = regexCallSign.Match (checkIn);
-                            if (match.Success) checkIn = match.Value;
+                            checkIn = isValidCallsign (checkIn);
                         }
                         bouncedString.Append ("Message to: " + checkIn + " was not deliverable.\r\n");
                         skipped++;
@@ -409,6 +432,7 @@ class Winlink_Checkins
                         if (subjText.Contains (netName))
                         {
 
+                            pointsOff = "";
                             // get x-Source if available XXXX
                             var xSrc = fileText.IndexOf ("X-SOURCE: ");
                             if (xSrc > -1)
@@ -576,16 +600,20 @@ class Winlink_Checkins
                             if (len < 0)
                             {
                                 Console.Write ("endPostion is less than startPosition in: " + file + "\n");
-                                Console.Write ("Break at line 550ish. Press enter to close.");
+                                Console.Write ("Break at line 598ish. Press enter to close.");
                                 input = Console.ReadLine ();
                                 break;
                             }
-
+                            score = 10;
+                            isPerfect = true;
                             string msgField = fileText.Substring (startPosition, len);
+                            int lineBreak = fileText.IndexOf ("=\r\n");
+
                             msgField = msgField
-                                .Replace ("=20", "")
-                                .Replace ("=0A", "")
-                                .Replace ("=0", "")
+                                .Replace ("=\r\n","") // some messages get a line wrap that messes things up
+                                .Replace ("=20", "") // asci hex space
+                                .Replace ("=0A", "") // asci hex new line / line feed
+                                .Replace ("=0", "")  // asci hex null
                                 .Replace ("16. CONTACT INFO:", ",")
                                 .Trim ()
                                 .Replace ("  ", " ")
@@ -600,25 +628,44 @@ class Winlink_Checkins
                                 //.Trim(',')
                                 + ",";
                             checkIn = msgField
-                                //.Replace(" ,", ",")    
                                 //.Trim()
                                 //.Trim(',')
                                 //.Trim()+",";
                                 ;
 
                             // Create a Regex object with the pattern
-                            Regex regexCallSign = new Regex (callSignPattern, RegexOptions.IgnoreCase);
+                            // and find the first callsign match in the checkIn string
+                            // only use the first line
+                            endPosition = checkIn.IndexOf ("\r\n");
+                            if (endPosition > -1) checkIn = checkIn.Substring (0, endPosition);
 
-                            // find the first callsign match in the checkIn string
-                            Match match = regexCallSign.Match (checkIn);
-                            if (match.Success)
+
+                            // Split the checkin string into an array of strings
+                            checkIn = removeFieldNumber (checkIn);
+                            string [] checkinItems = checkIn.Split (",");
+
+                            // now check to see if it is a perfect message and deduct points if not
+                            // checkin call sign
+                            checkIn = checkinItems [0];
+                            checkIn = isValidCallsign (checkIn);
+                            // if (checkIn != checkinItems [0])
+                            // {
+                            //  isPerfect = false;
+                            // score--;
+                            // pointsOff = "\tminus 1 for invalid callsign as the first field\r\n";
+                            // }
+                            if (checkIn != "")
                             {
-                                checkIn = match.Value;
-                                if (checkIn == "KB7WHO") { checkIn = xSource; }
+                                // checkIn = match.Value;
+                                // if they put my callsign in the message, discard it and look at the xSource tag
+                                if (checkIn == "KB7WHO" && xSource != "KB7WHO-13") { checkIn = xSource; }
                                 if (xSource == "") { xSource = checkIn; }
                             }
                             else
                             {
+                                isPerfect = false;
+                                score--;
+                                pointsOff = "\tminus 1 for invalid or missing callsign as the first field - " + checkinItems [0] + "\r\n";
                                 // try the from field since the callsign could not be located in the msg field
                                 startPosition = fileText.IndexOf ("FROM:");
                                 if (startPosition > -1) { startPosition += 6; }
@@ -628,17 +675,8 @@ class Winlink_Checkins
                                 if (len > 0)
                                 {
                                     checkIn = fileText.Substring (startPosition, len);
-                                    // Create a Regex object with the pattern
-                                    regexCallSign = new Regex (callSignPattern, RegexOptions.IgnoreCase);
-                                    match = regexCallSign.Match (checkIn);
-                                    if (match.Success)
-                                    {
-                                        checkIn = match.Value;
-                                    }
-                                    else
-                                    {
-                                        checkIn = "";
-                                    }
+                                    checkIn = isValidCallsign (checkIn);
+
                                 }
                             }
                             // debug Console.Write("Start at:"+startPosition+": and end at:"+endPosition+"\nCallsign found: "+checkIn);
@@ -649,6 +687,211 @@ class Winlink_Checkins
                             }
                             else
                             {
+                                // continue checking for perfect message and point deductions
+                                // int checkInItemsCt = checkinItems.Length;
+                                // int i = 0;
+                                string checkinCountry = "";
+                                len = checkinItems.Length;
+                                if (len < 8)
+                                {
+                                    score = score - (8 - len);
+                                    pointsOff += "\tminus " + (8 - len) + " point(s), for missing fields.\r\n";
+                                }
+
+                                if (checkinItems.Length > 2)
+                                {
+                                    // array is zero based
+                                    string checkinName = isValidName (checkinItems [1]);
+                                    if (checkinName == "")
+                                    {
+                                        isPerfect = false;
+                                        score--;
+                                        pointsOff += "\tminus 1 point, missing or invalid name in field 2 - " + checkinItems [1] + "\r\n";
+                                    }
+                                }
+
+                                if (checkinItems.Length >= 6)
+                                {
+                                    string countries = "PHILIPPINES,TRINIDAD,GERMANY,ENGLAND,NORWAY,NEW ZEALAND,ST LUCIA,VENEZUELA,AUSTRIA,ROMANIA,CANADA,SERBIA,AFG,ALA,ALB,DZA,ASM,AND,AGO,AIA,ATA,ATG,ARG,ARM,ABW,AUS,AUT,AZE,BHS,BHR,BGD,BRB,BLR,BEL,BLZ,BEN,BMU,BTN,BOL,BIH,BWA,BVT,BRA,IOT,VGB,BRN,BGR,BFA,BDI,KHM,CMR,CAN,CPV,BES,CYM,CAF,TCD,CHL,CHN,CXR,CCK,COL,COM,COK,CRI,HRV,CUB,CUW,CYP,CZE,COD,DNK,DJI,DMA,DOM,TLS,ECU,EGY,SLV,GNQ,ERI,EST,SWZ,ETH,FLK,FRO,FSM,FJI,FIN,FRA,GUF,PYF,ATF,GAB,GMB,GEO,DEU,GHA,GIB,GRC,GRL,GRD,GLP,GUM,GTM,GGY,GIN,GNB,GUY,HTI,HMD,HND,HKG,HUN,ISL,IND,IDN,IRN,IRQ,IRL,IMN,ISR,ITA,CIV,JAM,JPN,JEY,JOR,KAZ,KEN,KIR,XXK,KWT,KGZ,LAO,LVA,LBN,LSO,LBR,LBY,LIE,LTU,LUX,MAC,MDG,MWI,MYS,MDV,MLI,MLT,MHL,MTQ,MRT,MUS,MYT,MEX,MDA,MNG,MNE,MSR,MAR,MOZ,MMR,NAM,NRU,NPL,NLD,NCL,NZL,NIC,NER,NGA,NIU,NFK,PRK,MKD,MNP,NOR,OMN,PAK,PLW,PSE,PAN,PNG,PRY,PER,PHL,PCN,POL,PRT,MCO,PRI,QAT,COG,REU,ROU,RUS,RWA,BLM,SHN,KNA,LCA,MAF,SPM,VCT,WSM,SMR,STP,SAU,SEN,SRB,SYC,SLE,SGP,SXM,SVK,SVN,SLB,SOM,ZAF,SGS,KOR,SSD,ESP,LKA,SDN,SUR,SJM,SWE,CHE,SYR,TWN,TJK,TZA,THA,TGO,TKL,TON,TTO,TUN,TUR,TKM,TCA,TUV,UGA,UKR,ARE,GBR,UMI,USA,URY,UZB,VUT,VAT,VEN,VNM,VIR,WLF,ESH,YEM,ZMB,ZWE,";
+                                    //PHILIPPINES,TRINIDAD,GERMANY,ENGLAND,NORWAY,NEW ZEALAND,ST LUCIA,VENEZUELA,AUSTRIA,ROMANIA,CANADA,SERBIA,
+                                    checkinCountry = isValidField (checkinItems [5], countries);
+                                    if (checkinCountry == "")
+                                    {
+                                        isPerfect = false;
+                                        score--;
+                                        pointsOff += "\tminus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - " + checkinItems [5] + "\r\n";
+                                    }
+                                }
+                                if (checkinItems.Length >= 5)
+                                {
+                                    string checkinState = checkinItems [4].Replace(".","");
+                                    int scoreState = 0;
+                                    string tempStr = "";
+                                    string states = "";
+
+                                    switch (checkinCountry)
+                                    {
+                                        case "AUT":  // Austria AUT
+                                            states = "B,K,N,S,ST,T,O,W,V";
+                                            checkinState = isValidField (checkinState, states);
+                                            if (checkinState == "")
+                                            {
+                                                isPerfect = false;
+                                                tempStr += "missing or invalid AUT state abbreviation ";
+                                                scoreState++;
+                                            }
+                                            break;
+
+                                        case "CAN": // Canada CAN
+                                            states = "NL,PE,NS,NB,QC,ON,MB,SK,AB,BC,YT,NT,NU";
+                                            checkinState = isValidField (checkinState, states);
+                                            if (checkinState == "")
+                                            {
+                                                isPerfect = false;
+                                                tempStr += "missing or invalid CAN province abbreviation ";
+                                                scoreState++;
+                                            }
+                                            break;
+
+                                        case "DEU": // Deutschland - Germany DEU
+                                            states = "BW,BY,BE,BB,HB,HH,HE,MV,NI,NW,RP,SL,SN,ST,SH,TH";
+                                            if (checkinState == "")
+                                            {
+                                                isPerfect = false;
+                                                // tempStr += "missing or invalid DEU state abbreviation ";
+                                                tempStr += "fehlendes oder ungültiges DEU-Landeskürzel ";
+                                                scoreState++;
+                                            }
+                                            break;
+
+                                        case "GBR":
+                                        case "UK": // United Kingdom UK Great Britain GBR
+                                            // states = "ABE,ABD,ANS,AGB,CLK,DGY,DND,EAY,EDU,ELN,ERW,EDH,ELS,FAL,FIF,GLG,HLD,IVC,MLN,MRY,NAY,NLK,ORK,PKN,RFW,SCB,ZET,SAY,SLK,STG,WDU,WLN,";
+                                            // if (checkinState == "")
+                                            // {
+                                            // isPerfect = false;
+                                            // tempStr += "missing or invalid GBR council area abbreviation ";
+                                            // scoreState++;
+                                            // }
+                                            break;
+
+                                        case "NZL": // New Zealand NZL
+                                            states = "AUK,BOP,CAN,GIS,WGN,HKB,MWT,MWT,MBH,NSN,NTL,OTA,STL,TKI,TKI,TAS,HKB,WGN,WTC,STL,GIS,NTL,TAS,BOP,AUK,WKO,WKO,CAN,WTC,NSN,OTA,";
+                                            if (checkinState == "")
+                                            {
+                                                isPerfect = false;
+                                                tempStr += "missing or invalid NZL region abbreviation ";
+                                                scoreState++;
+                                            }
+                                            break;
+
+                                        case "NOR": // Norway NOR
+                                            break;
+                                        case "PHL": // Philippines PHL
+                                            states = "ABR,AGN,AGS,AKL,ALB,ANT,APA,AUR,BAN,BAS,BEN,BIL,BOH,BTG,BTN,BUK,BUL,CAG,CAM,CAN,CAP,CAS,CAT,CAV,CEB,COM,DAO,DAS,DAV,DIN,DVO,EAS,GUI,IFU,ILI,ILN,ILS,ISA,KAL,LAG,LAN,LAS,LEY,LUN,MAD,MAS,MDC,MDR,MGN,MGS,MOU,MSC,MSR,NCO,NEC,NER,NSA,NUE,NUV,PAM,PAN,PLW,QUE,QUI,RIZ,ROM,SAR,SCO,SIG,SLE,SLU,SOR,SUK,SUN,SUR,TAR,TAW,WSA,ZAN,ZAS,ZMB,ZSI";
+                                            if (checkinState == "")
+                                            {
+                                                isPerfect = false;
+                                                tempStr += "missing or invalid PHL region abbreviation ";
+                                                scoreState++;
+                                            }
+                                            break;
+
+                                        case "ROU": // Romania ROU
+                                            // states = "AB,AG,AR,B,BC,BH,BN,BR,BT,BV,BZ,CJ,CL,CS,CT,CV,DB,DJ,GJ,GL,GR,HD,HR,IF,IL,IS,MH,MM,MS,NT,OT,PH,SB,SJ,SM,SV,TL,TM,TR,VL,VN,VS,";
+                                            break;
+
+                                        case "SRB": // Serbia SRB
+                                            break;
+
+                                        case "LCA": // St. Lucia LCA
+                                            break;
+
+                                        case "TTO": // Trinidad & Tobago TTO
+                                            break;
+
+                                        case "USA": // United States of America USA
+                                            states = "AK,AL,AR,AS,AZ,CA,CO,CT,DC,DE,FL,GA,GU,HI,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MP,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,PR,RI,SC,SD,TN,TX,UM,UT,VA,VI,VT,WA,WI,WV,WY";
+                                            checkinState = isValidField (checkinState, states);
+                                            if (checkinState == "")
+                                            {
+                                                isPerfect = false;
+                                                tempStr += "missing or invalid USA state 2 letter abbreviation ";
+                                                scoreState++;
+                                            }
+                                            break;
+                                        case "VEN": // Venezuela VEN
+                                            states = "DC,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,R,S,T,U,V,W,X,Y,Z";
+                                            checkinState = isValidField (checkinState, states);
+                                            if (checkinState == "")
+                                            {
+                                                isPerfect = false;
+                                                tempStr += "VEN - abreviación del estado falta o es inválido ";
+                                                scoreState++;
+                                            }
+                                            break;
+                                        default:
+                                            scoreState++;
+                                            tempStr = "missing or invalid state/province/region (due to missing country?) ";
+                                            break;
+                                    }
+
+                                    if (scoreState > 0)
+                                    {
+                                        pointsOff += "\tminus 1 point, " + tempStr + "in field 5 -  " + checkinItems [4] + "\r\n";
+                                        score--;
+                                    }
+
+                                    if (checkinItems.Length > 4 && checkinCountry == "USA") // check only for USA
+                                    {
+                                        string checkinCounty = isValidName (checkinItems [3].Replace (" COUNTY", ""));
+                                        if (checkinCounty == "")
+                                        {
+                                            isPerfect = false;
+                                            //score--;
+                                            //pointsOff += "\tminus 1 point, invalid county in field 4 - " + checkinItems [3] + "\r\n";
+                                            pointsOff += "\tno deduction for now, invalid county in field 4, use NA or NONE if you don't have one - " + checkinItems [3] + "\r\n";
+                                        }
+                                    }
+
+                                    if (checkinItems.Length > 3)
+                                    {
+                                        string checkinCity = isValidName (checkinItems [2]);
+                                        if (checkinCity == "")
+                                        {
+                                            isPerfect = false;
+                                            score--;
+                                            pointsOff += "\tminus 1 point, missing or invalid city in field 3 " + checkinItems [2] + "\r\n";
+                                        }
+                                    }
+
+                                }
+                                if (checkinItems.Length >= 7)
+                                {
+                                    bandStr = checkinItems [6];
+                                    bandStr = checkBand (bandStr);
+                                    if (bandStr == "")
+                                    {
+                                        isPerfect = false;
+                                        score--;
+                                        pointsOff += "\tminus 1 point, missing or invalid band in field 7 - " + checkinItems [6] + "\r\n";
+                                    }
+                                    else { checkinItems [6] = bandStr; } // update the item if it was adjusted in the method for minor formatting issues
+                                }
+                                if (checkinItems.Length >= 8)
+                                {
+                                    modeStr = checkinItems [7];
+                                    modeStr = checkMode (modeStr, bandStr);
+                                    if (modeStr == "")
+                                    {
+                                        isPerfect = false;
+                                        score--;
+                                        pointsOff += "\tminus 1 point, missing or invalid mode in field 8 - " + checkinItems [7] + "\r\n";
+                                    }
+                                }
+                                //    i++;
+                                // }
+                                // check to see if this is a duplicate checkin
                                 startPosition = testString.IndexOf (checkIn);
                                 if (startPosition >= 0)
                                 {
@@ -658,8 +901,7 @@ class Winlink_Checkins
                                     dupeFlag = 1;
                                     dupCt++;
                                 }
-                                //else
-                                //{
+
                                 ct++;
                                 if (localWeather > 0) { localWeatherCt++; }
                                 if (severeWeather > 0) { severeWeatherCt++; }
@@ -802,6 +1044,7 @@ class Winlink_Checkins
                                                 // Console.WriteLine("No valid grid and no GPS coordinates found in: "+messageID+" latitude set to: "+latitude+" longitude set to: "+longitude);
                                                 noGPSCt++;
                                                 noGPSFlag++;
+                                                score -= 2;
                                                 msgField = msgField + ",No Location Data Found in message";
                                                 noGPSString.Append ("\t" + messageID + "- - " + checkIn + ": latitude set to: " + latitude + " longitude set to: " + longitude + "\r\n");
                                             }
@@ -811,7 +1054,7 @@ class Winlink_Checkins
                                 msgField = msgField.Replace ("\r\n", ",");
                                 msgField = removeFieldNumber (msgField);
                                 msgFieldNumbered = fillFieldNum (msgField);
-                                csvString.Append (xSource + ":" + messageID + "," + latitude + "," + longitude + "," + locType + "," + msgField + "\r\n");
+                                csvString.Append (checkIn + ":" + messageID + "," + latitude + "," + longitude + "," + locType + "," + msgField + "\r\n");
 
                                 // find the band if it's where it's supposed to be
                                 bandStr = "";
@@ -913,8 +1156,8 @@ class Winlink_Checkins
                                         badBandString.Append ("\tBad band: " + messageID + " - " + checkIn + ": _" + bandStr + "_  |  " + msgFieldNumbered + "\r\n");
                                         badBandCt++;
                                     }
-                                    else { bandCt++; }
-                                } 
+                                }
+                                else { bandCt++; }
 
                                 if (modeStr == "")
                                 {
@@ -978,6 +1221,8 @@ class Winlink_Checkins
                                     .Trim ();
                                 if (modeStr.IndexOf ("PACKET") > -1) { modeStr = "PACKET"; }
                                 if (modeStr.IndexOf ("MESH") > -1) { modeStr = "MESH"; }
+                                if (modeStr.IndexOf ("VARA") > -1 && bandStr == "HF") { modeStr = "VARA HF"; }
+                                if (modeStr.IndexOf ("VARA") > -1 && bandStr == "VHF") { modeStr = "VARA FM"; }
                                 if (bandStr == "TELNET") { modeStr = "SMTP"; }
 
 
@@ -988,14 +1233,14 @@ class Winlink_Checkins
                                         if (modeStr == "VARA HF") { bandStr = "HF"; }
                                         // if (modeStr == "VARA FM") { bandStr = "VHF"; }
                                     }
-                                    
+
                                 }
                                 modeStr = checkMode (modeStr, bandStr);
                                 if (modeStr == "SMTP") { bandStr = "TELNET"; }
                                 if (modeStr == "MESH") { meshCt++; }
                                 if (modeStr == "")
                                 {
-                                    if (msgField.IndexOf("VARA FM") > -1) { modeStr = "VARA FM"; }
+                                    if (msgField.IndexOf ("VARA FM") > -1) { modeStr = "VARA FM"; }
                                     if (msgField.IndexOf ("VARA HF") > -1) { modeStr = "VARA HF"; }
                                     if (msgField.IndexOf ("PACKET") > -1) { modeStr = "PACKET"; }
                                     if (modeStr == "")
@@ -1005,8 +1250,8 @@ class Winlink_Checkins
                                         badBandString.Append ("\tBad mode: " + messageID + " - " + checkIn + ": " + modeStr + " -  |  " + msgFieldNumbered + "\r\n");
                                         badModeCt++;
                                     }
-                                    else { modeCt++; }
-                                } 
+                                }
+                                else { modeCt++; }
 
                                 // debug Console.Write("modeStr final=|"+modeStr+"|  \r\n");
 
@@ -1016,21 +1261,32 @@ class Winlink_Checkins
                                 {
                                     if (dupeFlag == 0)
                                     {
-                                        mapString.Append (xSource + "," + latitude + "," + longitude + "," + bandStr + "," + modeStr + "\r\n");
                                         mapCt++;
                                     }
+                                    else
+                                    {
+                                        // Remove any lines containing the call sign
+                                        RemoveLineContaining (mapString, xSource);
+                                    }
+                                    mapString.Append (checkIn + "," + latitude + "," + longitude + "," + bandStr + "," + modeStr + "\r\n");
                                 }
-
+                                // Console.WriteLine (checkIn + ":"+messageID+" - "+ ct + " - mapCt:" + mapCt + " - dupCt: " + dupCt);
                                 // xml data
                                 var reminderTxt = "";
-                                if (noGPSFlag > 0 || bandStr == "" || modeStr == "")
+                                // if (isPerfect) reminderTxt = "\r\nWell done.\r\n";
+                                if (isPerfect)
                                 {
-                                    reminderTxt = "\r\nRecommended format reminder: callSign, firstname, city, county, STate, country, band, Mode, grid\r\n" +
+                                    reminderTxt = "\r\nPerfect Message! Your score is 10.\r\n";
+                                    perfectScoreCt++;
+                                }
+                                else
+                                {
+                                    reminderTxt = "Your score is: " + score + "\r\n" + pointsOff + "\r\nRecommended format reminder in the Comment/Message field:\r\ncallSign, firstname, city, county, state/province/region, country, band, Mode, grid\r\n" +
                                         "Example: xxNxxx, Greg, Sugar City, Madison, ID, USA, 70cm, VARA FM, DN43du\r\n" +
                                         "Example 2: DxNxx,Mario,TONDO,MANILA,NCR,PHILIPPINES,2M,VARA FM,PK04LO\r\n" +
                                         "Example 2: xxNxx,Andre,Burnaby,,BC,Canada,2M,VARA FM,CN89ud\r\n";
                                 }
-                                else { reminderTxt = "\r\nPerfect Message!\r\n"; }
+
                                 noGPSFlag = 0;
                                 // the old message ID will destroy stuff in winlink if it is the same when trying to post
                                 // create a new message ID by rearranging the old one
@@ -1042,7 +1298,7 @@ class Winlink_Checkins
                                     new XElement ("id", newMessageID),
                                     new XElement ("foldertype", "Fixed"),
                                     new XElement ("folder", "Outbox"),
-                                    new XElement ("subject", "GLAWN acknowledgement ", DateTime.UtcNow.ToString ("yyyy-MM-dd")),
+                                    new XElement ("subject", "GLAWN acknowledgement ", utcDate),
                                     new XElement ("time", utcDate),
                                     new XElement ("sender", "GLAWN"),
                                     // for testing
@@ -1086,6 +1342,7 @@ class Winlink_Checkins
                                             "   Longitude: " + longitude + "\r\n" +
                                             "   Band: " + bandStr + "\r\n" +
                                             "   Mode: " + modeStr + "\r\n" +
+                                            "   Original Message ID: " + messageID + "\r\n" +
                                             "\r\nGLAWN Current Map: https://tinyurl.com/GLAWN-Map\r\n" +
                                             "Comments: https://tinyurl.com/GLAWN-comments\r\n" +
                                             "GLAWN Checkins Report: https://tinyurl.com/Checkins-Report\r\n" +
@@ -1095,7 +1352,7 @@ class Winlink_Checkins
                                 ));
 
                                 // Add the message message_list
-                                xmlDoc.Root.Add (messageElement);
+                                // xmlDoc.Root.Add (messageElement);
 
                                 junk = 0; // just so i could put a debug here
                                 dupeFlag = 0; // reset the duplicate flag
@@ -1106,16 +1363,20 @@ class Winlink_Checkins
                             startPosition = rosterString.IndexOf (checkIn);
                             if (startPosition < 0)
                             {
-                                if (newCt == 0)
+                                checkIn = isValidCallsign (checkIn);
+                                if (checkIn != "")
                                 {
-                                    newCheckIns.Append ("New Checkins:\r\n");
+                                    if (newCt == 0)
+                                    {
+                                        newCheckIns.Append ("New Checkins:\r\n");
+                                    }
+                                    // debug
+                                    Console.Write (checkIn + "  " + messageID + " was not found in roster.txt. \n");
+                                    newCheckIns.Append (checkIn + ", ");
+                                    // update roster.txt to contain the new checkin
+                                    File.AppendAllText ("roster.txt", ":1; " + checkIn);
+                                    newCt++;
                                 }
-                                // debug
-                                Console.Write (checkIn + " was not found in roster.txt. \n");
-                                newCheckIns.Append (checkIn + ", ");
-                                // update roster.txt to contain the new checkin
-                                File.AppendAllText ("roster.txt", "; " + checkIn);
-                                newCt++;
                             }
                         }
                         else
@@ -1130,7 +1391,7 @@ class Winlink_Checkins
                 junk = 0;
             }
             var tempCT = 15;
-            logWrite.WriteLine ("Current GLAWN Checkins posted: " + DateTime.Now.ToString ("yyyymmdd HH:mm:ss"));
+            logWrite.WriteLine ("Current GLAWN Checkins posted: " + utcDate);
 
             logWrite.WriteLine ("    Total Stations Checking in:" + (ct - dupCt) + "    Duplicates:" + dupCt + "    Total Checkins:" + ct + "    Removal Requests: " + removalCt);
             logWrite.WriteLine ("Non-" + netName + " checkin messages skipped: " + skipped + "(including " + ackCt + " acknowledgements and " + outOfRangeCt + " out of date range messages skipped.)\r\n");
@@ -1189,6 +1450,7 @@ class Winlink_Checkins
             if (meshCt > 0) { logWrite.WriteLine ("Mesh checkins: " + meshCt); }
             logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickHWCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt) + "\r\n");
             //var totalValidGPS = mapCt-noGPSCt;
+            logWrite.WriteLine ("Total Checkins with a perfect message: " + perfectScoreCt);
             logWrite.WriteLine ("Total Checkins with a geolocation: " + (mapCt - noGPSCt));
             logWrite.WriteLine ("Total Checkins with something in the band field: " + bandCt);
             logWrite.WriteLine ("Total Checkins with something in the mode field: " + modeCt);
@@ -1273,14 +1535,15 @@ class Winlink_Checkins
             Console.WriteLine ($"An error occurred while saving the date: {ex.Message}");
         }
     }
+
     static bool ExtractCoordinates (string input, out double latitude, out double longitude)
     {
         // Initialize output variables
         latitude = 0;
         longitude = 0;
 
-        // Define the regular expression for latitude and longitude (with optional N/S/E/W directions)
-        Regex regex = new Regex (@"([-+]?[0-9]*\.?[0-9]+)\s*[°]?\s*([NS]),?\s*([-+]?[0-9]*\.?[0-9]+)\s*[°]?\s*([EW])", RegexOptions.IgnoreCase);
+        // Define the regular expression for GPS latitude and longitude (with optional N/S/E/W directions)
+        Regex regex = new Regex (@"([-+]?([0-8]?\d(\.\d+)?|90(\.0+)?))\s*[°]?\s*([NS]),?\s*([-+]?((1[0-7]\d|\d{1,2})(\.\d+)?|180(\.0+)?))\s*[°]?\s*([EW])");
 
         // Search for the latitude and longitude pattern in the input string
         Match match = regex.Match (input);
@@ -1293,9 +1556,9 @@ class Winlink_Checkins
             if (match.Groups [2].Value.ToUpper () == "S")
                 latitude = -latitude;
             // Extract the numeric part of longitude
-            longitude = Math.Round (double.Parse (match.Groups [3].Value), 6);
+            longitude = Math.Round (double.Parse (match.Groups [7].Value), 6);
             // If it's west (W), negate the longitude
-            if (match.Groups [4].Value.ToUpper () == "W")
+            if (match.Groups [11].Value.ToUpper () == "W")
                 longitude = -longitude;
 
             return true;
@@ -1303,6 +1566,45 @@ class Winlink_Checkins
 
         // Return false if latitude and longitude are not found
         return false;
+    }
+    public static string isValidCallsign (string input)
+    {
+        string pattern = @"\b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b";
+        Regex regexCallSign = new Regex (pattern, RegexOptions.IgnoreCase);
+        Match match = regexCallSign.Match (input);
+        if (match.Success)
+        { input = match.Value; }
+        else { input = ""; }
+        return input;
+    }
+    public static string isValidName (string input)
+    {
+        string pattern = @".*\d.*(\r?\n)?";
+        input = input.ToUpper ();
+        string result = Regex.Replace (input, pattern, "", RegexOptions.Multiline);
+        // Regex regexName = new Regex (pattern, RegexOptions.IgnoreCase);
+        // Match match = regexName.Match (input);
+        // if (match.Success)
+        // { input = match.Value; }
+        // else { input = ""; }
+        return result;
+    }
+    // public static string isValidCountry (string input)
+    // {
+    //     string pattern = "AUSTRIA,CANADA,ENGLAND,UK,GERMANY,NORWAY,NEW ZEALAND,PHILIPPINES,ROMANIA,SERBIA,ST LUCIA,TRINIDAD & TOBAGO,VENEZUELA,AFG,ALA,ALB,DZA,ASM,AND,AGO,AIA,ATA,ATG,ARG,ARM,ABW,AUS,AUT,AZE,BHS,BHR,BGD,BRB,BLR,BEL,BLZ,BEN,BMU,BTN,BOL,BIH,BWA,BVT,BRA,IOT,VGB,BRN,BGR,BFA,BDI,KHM,CMR,CAN,CPV,BES,CYM,CAF,TCD,CHL,CHN,CXR,CCK,COL,COM,COK,CRI,HRV,CUB,CUW,CYP,CZE,COD,DNK,DJI,DMA,DOM,TLS,ECU,EGY,SLV,GNQ,ERI,EST,SWZ,ETH,FLK,FRO,FSM,FJI,FIN,FRA,GUF,PYF,ATF,GAB,GMB,GEO,DEU,GHA,GIB,GRC,GRL,GRD,GLP,GUM,GTM,GGY,GIN,GNB,GUY,HTI,HMD,HND,HKG,HUN,ISL,IND,IDN,IRN,IRQ,IRL,IMN,ISR,ITA,CIV,JAM,JPN,JEY,JOR,KAZ,KEN,KIR,XXK,KWT,KGZ,LAO,LVA,LBN,LSO,LBR,LBY,LIE,LTU,LUX,MAC,MDG,MWI,MYS,MDV,MLI,MLT,MHL,MTQ,MRT,MUS,MYT,MEX,MDA,MNG,MNE,MSR,MAR,MOZ,MMR,NAM,NRU,NPL,NLD,NCL,NZL,NIC,NER,NGA,NIU,NFK,PRK,MKD,MNP,NOR,OMN,PAK,PLW,PSE,PAN,PNG,PRY,PER,PHL,PCN,POL,PRT,MCO,PRI,QAT,COG,REU,ROU,RUS,RWA,BLM,SHN,KNA,LCA,MAF,SPM,VCT,WSM,SMR,STP,SAU,SEN,SRB,SYC,SLE,SGP,SXM,SVK,SVN,SLB,SOM,ZAF,SGS,KOR,SSD,ESP,LKA,SDN,SUR,SJM,SWE,CHE,SYR,TWN,TJK,TZA,THA,TGO,TKL,TON,TTO,TUN,TUR,TKM,TCA,TUV,UGA,UKR,ARE,GBR,UMI,USA,URY,UZB,VUT,VAT,VEN,VNM,VIR,WLF,ESH,YEM,ZMB,ZWE,";
+    // int found = pattern.IndexOf (input);
+    // if (found == -1) input = "";
+    // return input;
+    // }
+
+    public static string isValidField (string input, string pattern)
+    {
+        input = input.ToUpper ();
+        pattern = pattern.ToUpper ();
+        pattern += ",NA,NONE";
+        int found = pattern.IndexOf (input);
+        if (found == -1) input = "";
+        return input;
     }
     static string ExtractMaidenheadGrid (string input)
     {
@@ -1461,6 +1763,10 @@ class Winlink_Checkins
     }
     public static string checkBand (string input)
     {
+        input = input
+            .Replace (" ", "")
+            .Replace("(","")
+            .Replace (")", "");
         switch (input)
         {
             case "TELNET":
@@ -1522,6 +1828,7 @@ class Winlink_Checkins
                 break;
             case "2M":
                 break;
+
             case "2":
                 input = input + "M";
                 break;
@@ -1575,6 +1882,8 @@ class Winlink_Checkins
     }
     public static string checkMode (string input, string input2)
     {
+        input = input
+            .Replace ("-", " ");
         switch (input)
         {
             case "SMTP":
@@ -1619,7 +1928,7 @@ class Winlink_Checkins
                 break;
             case "INDIUM GO":
                 break;
-            case "MESH":                
+            case "MESH":
                 break;
             case "APRS":
                 break;
@@ -1656,6 +1965,18 @@ class Winlink_Checkins
         // Join the sorted array back into a string
         string result = string.Join (",", items);
         return result;
+    }
+    static void RemoveLineContaining (StringBuilder sb, string callSign)
+    {
+        // Convert the StringBuilder content to a string array of lines
+        string [] lines = sb.ToString ().Split (new [] { "\r\n", "\n" }, StringSplitOptions.None);
+
+        // Filter out lines that contain the callSign
+        string [] filteredLines = lines.Where (line => !line.Contains (callSign)).ToArray ();
+
+        // Clear the original StringBuilder and append filtered lines
+        sb.Clear ();
+        sb.Append (string.Join (Environment.NewLine, filteredLines));
     }
 
 }
