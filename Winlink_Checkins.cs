@@ -1282,9 +1282,9 @@ class Winlink_Checkins
                                 else
                                 {
                                     reminderTxt = "Your score is: " + score + "\r\n" + pointsOff + "\r\nRecommended format reminder in the Comment/Message field:\r\ncallSign, firstname, city, county, state/province/region, country, band, Mode, grid\r\n" +
-                                        "Example: xxNxxx, Greg, Sugar City, Madison, ID, USA, 70cm, VARA FM, DN43du\r\n" +
+                                        "Example: xxNxxx, Greg, Sugar City, Madison, ID, USA, HF, VARA HF, DN43du\r\n" +
                                         "Example 2: DxNxx,Mario,TONDO,MANILA,NCR,PHILIPPINES,2M,VARA FM,PK04LO\r\n" +
-                                        "Example 2: xxNxx,Andre,Burnaby,,BC,Canada,2M,VARA FM,CN89ud\r\n";
+                                        "Example 2: xxNxx,Andre,Burnaby,,BC,Canada,TELNET,SMTP,CN89ud\r\n";
                                 }
 
                                 noGPSFlag = 0;
