@@ -25,24 +25,12 @@
 // write callsign and message to checkins.csv file
 // mapping resource https://github.com/RTykulsker/WinlinkMessageMapper
 
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
-using System.IO;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Globalization;
-using System.Runtime.Intrinsics.X86;
 using System.Xml.Linq;
-using static System.Net.Mime.MediaTypeNames;
-using System.Formats.Asn1;
-using System.ComponentModel;
-using System.Drawing;
+using System;
+using System.Diagnostics.Metrics;
 
 
 class Winlink_Checkins
@@ -57,13 +45,13 @@ class Winlink_Checkins
         bool isValid = false;
         string input;
 
-        Console.WriteLine ("Enter the start date - must be within two weeks of today (yyyymmdd): ");
+        Console.WriteLine ("Enter the start date - must be within three weeks of today (yyyymmdd): ");
         startDate = GetValidDate ();
         //startDate = startDate.ToUniversalTime();
 
         while (!isValid)
         {
-            Console.WriteLine ("Enter the end date - must be within two weeks of today (yyyymmdd): ");
+            Console.WriteLine ("Enter the end date - must be within three weeks of today (yyyymmdd): ");
             endDate = GetValidDate ();
             int startDateCompare = DateTime.Compare (startDate, endDate);
             if (startDateCompare >= 0)
@@ -100,17 +88,19 @@ class Winlink_Checkins
         // Look for roster.txt in the folder. If it exists, get the first (and only)
         // row for comparison down below
         string rosterFile = applicationFolder + "\\roster.txt";
+
         string xmlFile = applicationFolder + "\\Winlink_Import.xml"; // separate file for defective messages
         string xmlPerfFile = applicationFolder + "\\Winlink_Import_Perfect.xml"; // separate file for perfect messages
-        // string commentFile = applicationFolder+"\\GLAWN_Additional_Comments.txt";
+        // string commentFile = applicationFolder+"\\"+ netName +"_Additional_Comments.txt";
         // writeString variables to go in the output files
+        // StringBuilder roster = new StringBuilder ();
         StringBuilder netCheckinString = new StringBuilder ();
         StringBuilder netAckString2 = new StringBuilder ();
         StringBuilder bouncedString = new StringBuilder ();
         StringBuilder duplicates = new StringBuilder ();
         StringBuilder newCheckIns = new StringBuilder ();
         StringBuilder csvString = new StringBuilder ();
-        csvString.AppendLine ("Current GLAWN Checkins, posted: " + utcDate);
+        csvString.AppendLine ("Current " + netName + " Checkins, posted: " + utcDate);
         StringBuilder mapString = new StringBuilder ();
         mapString.Append ("CallSign,Latitude,Longitude,Band,Mode\r\n");
         StringBuilder badBandString = new StringBuilder ();
@@ -125,6 +115,7 @@ class Winlink_Checkins
         // string callSignPattern = @"\b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b";
         string testString = "";
         string rosterString = "";
+        string roster = "";
         string bandStr = "";
         string modeStr = "";
         // string noGPSStr = "";
@@ -151,7 +142,11 @@ class Winlink_Checkins
         string locType = "";
         string xSource = "";
         string fromTxt = "";
+        string tempFromTxt = "";
+        string tempCheckIn = "";
+        string [] checkinItems;
 
+        // string w3wText = "";
 
         addonString.AppendLine ("\r\nComments from the Current Checkins Posted\t" + utcDate + "\r\n-------------------------------");
         noGPSString.AppendLine ("\r\n++++++++\r\nThese had neither GPS data nor Maidenhead Grids\r\n-------------------------");
@@ -161,6 +156,7 @@ class Winlink_Checkins
         int startPosition = 0;
         int endPosition = 0;
         int quotedPrintable = 0;
+        int lastBoundary = 0;
         int commentPos = 0;
         int len = 0;
         int msgTotal = 0;
@@ -205,14 +201,23 @@ class Winlink_Checkins
         int PosRepCt = 0;
         int copyPR = -1;
         int ICS201Ct = 0;
+        int ICS202Ct = 0;
+        int ICS203Ct = 0;
         int exerciseCompleteCt = 0;
         int radioGram = 0;
         int radioGramCt = 0;
+        int winlinkCt = 0;
+        int patCt = 0;
+        int woadCt = 0;
+        int radioMailCt = 0;
+        int w3w = 0;
+        int newFormatCt = 0;
 
         double latitude = 0;
         double longitude = 0;
         bool isPerfect = true;
-        
+        bool newFormat = false;
+
 
         TextInfo textInfo = new CultureInfo ("en-US", false).TextInfo;
         // Create root XML document
@@ -225,7 +230,7 @@ class Winlink_Checkins
                 new XElement ("winlink_express_version", "1.7.17.0"),
                 // for testing
                 // new XElement("callsign", "KB7WHO")
-                new XElement ("callsign", "GLAWN")
+                new XElement ("callsign", netName)
             );
         xmlDoc.Root.Add (messageElement);
         xmlPerfDoc.Root.Add (messageElement);
@@ -245,7 +250,7 @@ class Winlink_Checkins
             endPosition = rosterString.IndexOf ("//", startPosition);
             len = endPosition - startPosition;
             if (len > 0)
-            { netName = rosterString.Substring (startPosition, len); }
+            { netName = rosterString.Substring (startPosition, len).Trim (); }
             else { netName = "GLAWN"; }
 
             // get the x-source name from the roster.txt file to be used as the netName variable in the xml file
@@ -254,7 +259,7 @@ class Winlink_Checkins
             endPosition = rosterString.IndexOf ("//", startPosition);
             len = endPosition - startPosition;
             if (len > 0)
-            { xmlXsource = rosterString.Substring (startPosition, len); }
+            { xmlXsource = rosterString.Substring (startPosition, len).Trim (); }
             else
             {
                 Console.WriteLine ("callSign missing from the roster.txt file. X-SOURCE in the xml file will be wrong.");
@@ -262,32 +267,46 @@ class Winlink_Checkins
 
             // get the checkin roster from the roster.txt file
             startPosition = endPosition + 2;
+            startPosition = rosterString.IndexOf ("\r\n", startPosition) + 2;
             // endPosition = rosterString.IndexOf("\r\n", startPosition);
             len = rosterString.Length - startPosition;
-            if (len > 0) { rosterString = rosterString.Substring (startPosition, len); }
+            if (len > 0)
+            {
+                roster = rosterString.Substring (startPosition, len);
+                //roster = SortCommaDelimitedString (roster, ";");
+            }
 
         }
         else
         {
-            Console.WriteLine (currentFolder + "\\" + rosterFile + " \n was not found!, all checkins will appear to be new.\nEnter the name of the net you are checking in:");
-            isValid = false;
-            while (!isValid)
+            // Get the netName
+            Console.WriteLine (currentFolder + "\\" + rosterFile + " \n was not found! A new one will be created. \r\n"
+                + "All checkins will appear to be new.\n\n"
+                + "Enter the name of the net you are checking in:");
+            input = Console.ReadLine ();
+            if (string.IsNullOrWhiteSpace (input))
             {
-                input = Console.ReadLine ();
-                if (input == null) { isValid = true; break; }
-                Console.WriteLine ("The net name is reguired to create a new roaster.txt file:");
-                netName = input;
+                Console.WriteLine ("The net name is required. Please enter the name of the net for which Winlink Checkins will be used.");
+            }
+            else
+            {
+                netName = input.ToUpper ();
             }
 
-            isValid = false;
+            // Get the xmlXsource callsign
             Console.WriteLine ("Enter the callsign to use as the xSource for the personalized messages:");
-            while (!isValid)
+            input = Console.ReadLine ();
+            if (string.IsNullOrWhiteSpace (input))
             {
-                input = Console.ReadLine ();
-                if (input == null) { isValid = true; break; }
-                Console.WriteLine ("A callsign is reguired to create a new roaster.txt file:");
-                xmlXsource = input;
+                Console.WriteLine ("This is required. Please enter the callsign to use as the xSource for the personalized messages:");
             }
+            else
+            {
+                xmlXsource = input.ToUpper ();
+            }
+
+            // File.Create (rosterFile);
+
         }
 
 
@@ -301,7 +320,7 @@ class Winlink_Checkins
             });
         Directory.CreateDirectory (currentFolder); // Ensures the folder exists
 
-        Console.Write ("\nMessages to process=" + files.Count () + " from folder " + currentFolder + "\n\n");
+        Console.Write ("\nMessages to process=" + files.Count () + " from folder \r\n" + currentFolder + "\n\n");
 
         // Create a text file called checkins.txt in the data folder and process the list of files.
         using (StreamWriter logWrite = new (Path.Combine (currentFolder, "checkins.txt")))
@@ -309,7 +328,7 @@ class Winlink_Checkins
         using (StreamWriter csvWrite = new (Path.Combine (currentFolder, "checkins.csv")))
         // Create a csv text file called mapfile.csv in the data folder to use as date for google maps
         using (StreamWriter mapWrite = new (Path.Combine (currentFolder, "mapfile.csv")))
-        using (StreamWriter commentWrite = new (Path.Combine (currentFolder, "GLAWN Additional Comments.txt")))
+        using (StreamWriter commentWrite = new (Path.Combine (currentFolder, netName + " Additional Comments.txt")))
         {
             // Read each file selected to find a line labeled To: and if the rest of the line contains netName, write the data from the line labeled X-Source: to the text file.
             foreach (string file in files)
@@ -323,11 +342,18 @@ class Winlink_Checkins
                     longitudeStr = "";
                     saveLongitudeStr = "";
                     longitude = 0;
+                    msgField = "";
+                    checkIn = "";
+                    callSignTypo = "";
+
+
+
                     //debug Console.Write("File "+file+"\n");
                     string fileText = reader.ReadToEnd ();
 
                     fileText = fileText.ToUpper ()
                         .Replace ("NO SCORE", "NOSCORE")
+                        .Replace ("NO SUMMARY", "NOSUMMARY")
                         .Replace ("=0A", "\r\n")
                         .Replace ("=\r\n", "") // remove line wraps
                         .Replace ("=20", " ");
@@ -351,21 +377,26 @@ class Winlink_Checkins
                     endPosition = fileText.IndexOf ("\r\n", startPosition);
                     len = endPosition - startPosition;
                     fromTxt = fileText.Substring (startPosition, len);
+                    fromTxt = fromTxt.Replace (',', ' ');
+                    tempFromTxt = isValidCallsign (fromTxt);
+                    if (tempFromTxt == "")
                     {
-                        fromTxt = fromTxt.Replace (',', ' ');
-                        // Create a Regex object with the pattern
-                        fromTxt = isValidCallsign (fromTxt);
+                        Console.WriteLine ("0396 Invalid callsign =>" + fromTxt + "<= in FROM: field of " + messageID);
                     }
+                    else fromTxt = tempFromTxt;
 
                     // find the end of the header section
                     var endHeader = fileText.IndexOf ("CONTENT-TRANSFER-ENCODING:");
                     quotedPrintable = fileText.IndexOf ("QUOTED-PRINTABLE");
+
                     if (quotedPrintable > -1) quotedPrintable += 20;
+                    lastBoundary = fileText.IndexOf ("--BOUNDARY", quotedPrintable);
                     commentPos = fileText.IndexOf ("COMMENT:", quotedPrintable);
                     if (commentPos > -1) commentPos += 9;
 
                     // does the sender want to skip the scoring of the message
                     var noScore = fileText.IndexOf ("NOSCORE");
+                    var noSummary = fileText.IndexOf ("NOSUMMARY");
 
 
                     // deterimine if it was forwarded to know to look below the first header info
@@ -502,7 +533,7 @@ class Winlink_Checkins
                         }
                         else
                         {
-                            // the QTH message was copied to GLAWN instead of forwarding the responses
+                            // the QTH message was copied to netName instead of forwarding the responses
                             // check for valid position report comment
                             copyPR = fileText.IndexOf ("POSITION REPORT");
                         }
@@ -535,10 +566,13 @@ class Winlink_Checkins
                     var incidentStatus = fileText.IndexOf ("INCIDENT STATUS");
 
                     // check for odd checkin message - don't let it scan through to a binary attachment!
-                    var lenBPQ = fileText.Length - 10;
-                    if (lenBPQ > 800) { lenBPQ = 800; }
-                    var BPQ = fileText.IndexOf ("BPQ", 1, lenBPQ);
-                    var BPQAPRS = fileText.IndexOf ("BPQAPRS", 1, lenBPQ);// if this is a mode type, ignore the problem
+                    //var lenBPQ = fileText.Length - 10;
+                    //if (lenBPQ > 800)  lenBPQ = 800 - quotedPrintable; 
+                    //testc = fileText.IndexOf("BPQ",quotedPrintable,)
+                    len = lastBoundary - quotedPrintable;
+                    if (len < 0) len = 0;
+                    var BPQ = fileText.IndexOf ("BPQ", quotedPrintable, len);
+                    var BPQAPRS = fileText.IndexOf ("BPQAPRS", quotedPrintable, len);// if this is a mode type, ignore the problem
                     if (BPQ == BPQAPRS) BPQ = -1;
 
                     // check for damage assessment report
@@ -565,6 +599,19 @@ class Winlink_Checkins
                     // check for ICS-201
                     var ICS201 = fileText.IndexOf ("ICS 201 INCIDENT BRIEFING");
 
+                    // check for ICS-202
+                    var ICS202 = fileText.IndexOf ("ICS202_INCIDENT_OBJECTIVES");
+
+                    // check for ICS-202
+                    var ICS203 = fileText.IndexOf ("ICS 203 ORGANIZATIONAL ASSIGNMENTS");
+
+                    // check for WhatThreeWords
+                    if (fileText.IndexOf ("///") > -1 || fileText.IndexOf ("W3W") > -1 || fileText.IndexOf ("WHAT 3 WORDS") > -1 || fileText.IndexOf ("WHAT3WORDS") > -1 || fileText.IndexOf ("WHATTHREEWORDS") > -1 || fileText.IndexOf ("UTMREF") > -1 || fileText.IndexOf ("MGRS") > -1)
+                    {
+                        w3w = 1;
+                    }
+                    else w3w = -1;
+
                     // check for Radiogram
                     radioGram = fileText.IndexOf ("\r\nAR \r\n");
 
@@ -572,8 +619,17 @@ class Winlink_Checkins
                     int startDateCompare = DateTime.Compare (sentDateUni, startDate);
                     int endDateCompare = DateTime.Compare (sentDateUni, endDate);
 
+                    // catch removals first
+                    if (removal > 0)
+                    {
+
+                        removalString.AppendLine (checkIn + " in " + messageID + " was a removal request.");
+                        removalCt++;
+                        junk = 0;  // debug Console.Write("Removal Request: "+file+", skipping.");
+                    }
+
                     // discard acknowledgements
-                    if (ack > 0)
+                    else if (ack > 0)
                     {
                         skipped++;
 
@@ -593,13 +649,7 @@ class Winlink_Checkins
                     }
 
 
-                    else if (removal > 0)
-                    {
 
-                        removalString.AppendLine (checkIn + " in " + messageID + " was a removal request.");
-                        removalCt++;
-                        junk = 0;  // debug Console.Write("Removal Request: "+file+", skipping.");
-                    }
                     else if (bounced > 0)
                     {
                         startPosition = bounced;
@@ -609,26 +659,30 @@ class Winlink_Checkins
                         {
                             checkIn = checkIn.Replace (',', ' ');
                             // Create a Regex object with the pattern
-                            checkIn = isValidCallsign (checkIn);
+                            tempCheckIn = isValidCallsign (checkIn);
+                            if (tempCheckIn == "")
+                            { Console.WriteLine ("Invalid callsign " + tempCheckIn + " in checkIn: " + messageID); }
+                            else checkIn = tempCheckIn;
                         }
                         bouncedString.Append ("Message to: " + checkIn + " was not deliverable.\r\n");
                         skipped++;
                     }
                     else
                     {
-                        // determine if the message has something in the subject to do with GLAWN
+                        // determine if the message has something in the subject to do with netName
                         // extended to include the TO: field in case they didn't put the netName in the subject
                         startPosition = fileText.IndexOf ("SUBJECT:");
                         if (startPosition > -1) { startPosition += 9; }
                         endPosition = fileText.IndexOf ("MESSAGE-ID", startPosition);
                         len = endPosition - startPosition;
-                        string subjText = fileText.Substring (startPosition, len);
+                        string subjText = fileText.Substring (startPosition, len); // includes the TO: and CC: fields to find the netName
 
                         // if (subjText.Contains (netName))
                         if (fileText.Contains (netName))
                         {
                             score = 10;
                             isPerfect = true;
+                            newFormat = false;
                             pointsOff = "";
                             // get x-Source if available XXXX
                             var xSrc = fileText.IndexOf ("X-SOURCE: ");
@@ -641,412 +695,425 @@ class Winlink_Checkins
                             }
                             else xSource = fromTxt;
 
-                            // skip APRS header 
-                            if (APRS > -1)
+                            // Does the message have the new format starting and ending with ##
+                            startPosition = fileText.IndexOf ("##");
+                            if (startPosition > -1)
                             {
-                                startPosition = fileText.IndexOf ("FROM:", endHeader);
-                                if (startPosition > -1)
+                                startPosition += 2;
+                                endPosition = fileText.IndexOf ("##", startPosition);
+                                if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                // new format found
+                                newFormat = true;
+                            }
+                            else // this sections finds the msgField location within the checkin data
+                            {
+                                // skip APRS header 
+                                if (APRS > -1)
                                 {
-                                    startPosition = fileText.IndexOf ("\r\n", startPosition);
-                                    if (startPosition > -1) { startPosition += 2; }
-                                    endPosition = fileText.IndexOf ("DO NOT REPLY", startPosition) - 1;
-                                }
-                                aprsCt++;
-                            }
-                            // skip JS8Call header 
-
-
-
-                            // adjust for ICS 213
-                            else if (ics > -1)
-                            {
-                                // check first is it a reply (checkin will be in a different location
-
-                                startPosition = fileText.IndexOf ("9. REPLY:");
-                                if (startPosition > -1)
-                                {
-                                    startPosition += 11;
-                                    endPosition = fileText.IndexOf ("REPLIED BY:", startPosition) - 3;
-                                }
-                                else
-                                {
-                                    startPosition = fileText.IndexOf ("MESSAGE:");
-                                    if (startPosition > -1) { startPosition += 12; }
-                                    endPosition = fileText.IndexOf ("APPROVED BY:", startPosition) - 3;
-                                }
-                            }
-                            // adjust for winlink checkin
-                            else if (winlinkCkin > -1)
-                            {
-                                // the winlink check-in form changed format between 5.0.10 and 5.0.5 so check for that
-                                var winlinkCkinOffset = fileText.IndexOf ("WINLINK CHECK-IN 5.0.5");
-                                // if (winlinkCkinOffset > -1) { winlinkCkinOffset = 9; } else { winlinkCkinOffset = 13; }
-                                // startPosition = fileText.IndexOf("COMMENTS:")+ winlinkCkinOffset;
-                                startPosition = fileText.IndexOf ("COMMENTS:");
-                                if (startPosition > -1) { startPosition += 9; }
-                                endPosition = fileText.IndexOf ("----------", startPosition) - 1;
-                            }
-
-                            // adjust for odd message that insert an R: line at the top
-                            else if (BPQ > -1)
-                            {
-                                startPosition = fileText.IndexOf ("BPQ", 1, lenBPQ);
-                                if (startPosition > -1) { startPosition += 12; }
-                                endPosition = fileText.IndexOf ("--BOUNDARY", startPosition) - 2;
-                            }
-                            else if (localWeather > -1)
-                            {
-                                startPosition = fileText.IndexOf ("NOTES:");
-                                if (startPosition > -1) { startPosition += 9; }
-                                endPosition = fileText.IndexOf ("----------", startPosition) - 1;
-                            }
-
-                            else if (severeWeather > -1)
-                            {
-                                startPosition = fileText.IndexOf ("COMMENTS:");
-                                if (startPosition > -1) { startPosition += 10; }
-                                endPosition = fileText.IndexOf ("----------", startPosition) - 1;
-                            }
-
-                            else if (incidentStatus > -1)
-                            {
-                                startPosition = fileText.IndexOf ("REPORT SUBMITTED BY:");
-                                if (startPosition > -1) { startPosition += 20; }
-                                endPosition = fileText.IndexOf ("----------", startPosition) - 1;
-                            }
-
-                            else if (damAssess > -1)
-                            {
-                                startPosition = fileText.IndexOf ("COMMENTS:");
-                                if (startPosition > -1) { startPosition += 21; }
-                                endPosition = fileText.IndexOf ("----------", startPosition) - 1;
-                            }
-
-                            else if (fieldSit > -1)
-                            {
-                                startPosition = fileText.IndexOf ("COMMENTS:");
-                                if (startPosition > -1) { startPosition += 11; }
-                                endPosition = fileText.IndexOf ("\r\n", startPosition);
-                            }
-
-                            else if (dyfi > -1)
-                            {
-                                startPosition = fileText.IndexOf ("COMMENTS");
-                                if (startPosition > -1) { startPosition += 11; }
-                                endPosition = fileText.IndexOf ("\r\n", startPosition) - 1;
-                            }
-
-                            else if (rriWR > -1)
-                            {
-                                startPosition = fileText.IndexOf ("BT\r\n");
-                                if (startPosition > -1) { startPosition += 3; }
-                                endPosition = fileText.IndexOf ("------", startPosition) - 1;
-                            }
-
-                            else if (quickM > -1)
-                            {
-                                startPosition = quickM;
-                                startPosition = fileText.IndexOf ("SENT ON ", startPosition);
-                                if (startPosition > -1)
-                                {
-                                    startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
-                                    endPosition = fileText.IndexOf ("--BOUNDARY", startPosition) - 2;
-                                }
-                                else startPosition = 0; endPosition = 0;
-                            }
-
-                            else if (qwm > -1)
-                            {
-                                startPosition = fileText.IndexOf ("\r\n", endHeader) + 4;
-                                endPosition = fileText.IndexOf ("IT WAS SENT FROM:");
-                                // some messages come with the checkin data in the wrong spot
-                                // so if there is nothing found so far, try the alternative
-                                len = endPosition - startPosition;
-                                if (len <= 0)
-                                {
-                                    startPosition = fileText.IndexOf ("IT WAS SENT FROM:");
-                                    startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
-                                    startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
-                                    endPosition = fileText.IndexOf ("THIS IS A ONE WAY", startPosition) - 2;
-                                }
-                            }
-                            else if (mi > -1)
-                            {
-                                startPosition = fileText.IndexOf ("ADDITIONAL INFORMATION");
-                                startPosition = fileText.IndexOf ("\r\n", startPosition);
-                                endPosition = fileText.IndexOf ("----", startPosition) - 1;
-                            }
-                            else if (ICS201 > -1)
-                            {
-                                startPosition = fileText.IndexOf ("PROTECT RESPONDERS FROM THOSE HAZARDS.");
-                                startPosition = fileText.IndexOf ("\r\n", startPosition);
-                                endPosition = fileText.IndexOf ("6. PREPARED BY:", startPosition) - 1;
-                            }
-                            else if (PosReport || copyPR > -1)
-                            {
-                                //if (copyPR == 0) reminderTxt += "No checkin information/Comment: tag in the message";
-                                if (commentPos == -1) reminderTxt += "Not a valid Position Report for this exercise. No Comment: tag in the message.\r\n";
-
-                                // change this to true to skip the point deduction
-                                bool skip = true;
-                                // bool skip = true;
-                                if ((startPR <= 0 || copyPR >= 0) && !skip)
-                                {
-                                    pointsOff = "\tminus 1 for invalid Position Report\r\n";
-                                    isPerfect = false;
-                                    score -= 1;
-                                }
-                                else
-                                {
-                                    if (commentPos > -1) startPosition = commentPos;
-                                    endPosition = fileText.IndexOf ("\r\n", startPosition);
-                                    if (startPosition == endPosition) commentPos = -1;
-                                }
-
-                                if (copyPR > -1)
-                                {
-                                    reminderTxt += "You appear to have copied the QTH message to GLAWN instead of fowarding the response from Service.\r\n";
-
-                                    if (copyPR >= 0 && commentPos > -1)
+                                    startPosition = fileText.IndexOf ("FROM:", endHeader);
+                                    if (startPosition > -1)
                                     {
-                                        startPosition = commentPos;
-                                        endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        startPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        if (startPosition > -1) { startPosition += 2; }
+                                        endPosition = fileText.IndexOf ("DO NOT REPLY", startPosition) - 1;
+                                    }
+                                    aprsCt++;
+                                }
+                                // skip JS8Call header 
+
+
+
+                                // adjust for ICS 213
+                                else if (ics > -1 && !newFormat)
+                                {
+                                    // check first is it a reply (checkin will be in a different location
+
+                                    startPosition = fileText.IndexOf ("9. REPLY:");
+                                    if (startPosition > -1)
+                                    {
+                                        startPosition += 11;
+                                        endPosition = fileText.IndexOf ("REPLIED BY:", startPosition) - 3;
                                     }
                                     else
                                     {
-                                        // find alternative msgField location
-                                        startPosition = quotedPrintable;
-                                        if (startPosition > -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        startPosition = fileText.IndexOf ("MESSAGE:");
+                                        if (startPosition > -1) { startPosition += 12; }
+                                        endPosition = fileText.IndexOf ("APPROVED BY:", startPosition) - 3;
                                     }
-                                    if (startPosition == endPosition) commentPos = -1;
                                 }
-                                else
+                                // adjust for winlink checkin
+                                else if (winlinkCkin > -1)
                                 {
-                                    if (startPR <= 0)
+                                    // the winlink check-in form changed format between 5.0.10 and 5.0.5 so check for that
+                                    var winlinkCkinOffset = fileText.IndexOf ("WINLINK CHECK-IN 5.0.5");
+                                    // if (winlinkCkinOffset > -1) { winlinkCkinOffset = 9; } else { winlinkCkinOffset = 13; }
+                                    // startPosition = fileText.IndexOf("COMMENTS:")+ winlinkCkinOffset;
+                                    startPosition = fileText.IndexOf ("COMMENTS:");
+                                    if (startPosition > -1) { startPosition += 9; }
+                                    endPosition = fileText.IndexOf ("----------", startPosition) - 1;
+                                }
+
+                                // adjust for odd message that insert an R: line at the top
+                                else if (BPQ > -1)
+                                {
+                                    len = lastBoundary - quotedPrintable;
+                                    if (len < 0) len = 0;
+                                    startPosition = fileText.IndexOf ("BPQ", quotedPrintable, len);
+                                    if (startPosition > -1) { startPosition += 12; }
+                                    // endPosition = fileText.IndexOf ("--BOUNDARY", startPosition) - 2;
+                                    endPosition = lastBoundary - 2;
+                                }
+                                else if (localWeather > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("NOTES:");
+                                    if (startPosition > -1) { startPosition += 9; }
+                                    endPosition = fileText.IndexOf ("----------", startPosition) - 1;
+                                }
+
+                                else if (severeWeather > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("COMMENTS:");
+                                    if (startPosition > -1) { startPosition += 10; }
+                                    endPosition = fileText.IndexOf ("----------", startPosition) - 1;
+                                }
+
+                                else if (incidentStatus > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("REPORT SUBMITTED BY:");
+                                    if (startPosition > -1) { startPosition += 20; }
+                                    endPosition = fileText.IndexOf ("----------", startPosition) - 1;
+                                }
+
+                                else if (damAssess > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("COMMENTS:");
+                                    if (startPosition > -1) { startPosition += 21; }
+                                    endPosition = fileText.IndexOf ("----------", startPosition) - 1;
+                                }
+
+                                else if (fieldSit > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("COMMENTS:");
+                                    if (startPosition > -1) { startPosition += 11; }
+                                    endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                }
+
+                                else if (dyfi > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("COMMENTS");
+                                    if (startPosition > -1) { startPosition += 11; }
+                                    endPosition = fileText.IndexOf ("\r\n", startPosition) - 1;
+                                }
+
+                                else if (rriWR > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("BT\r\n");
+                                    if (startPosition > -1) { startPosition += 3; }
+                                    endPosition = fileText.IndexOf ("------", startPosition) - 1;
+                                }
+
+                                else if (quickM > -1)
+                                {
+                                    startPosition = quickM;
+                                    startPosition = fileText.IndexOf ("SENT ON ", startPosition);
+                                    if (startPosition > -1)
                                     {
-                                        reminderTxt += "Not a valid Position Report Acknowledgement.\r\n";
-                                        if (QTH) reminderTxt += "This appears to be a copy of the message to QTH instead of a forward of the response from Service\r\n";
-                                        if (!skip)
-                                        {
-                                            pointsOff = "\tminus 1 for invalid Position Report\r\n";
-                                            isPerfect = false;
-                                            score -= 1;
-                                        }
+                                        startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
+                                        // endPosition = fileText.IndexOf ("--BOUNDARY", startPosition) - 2;
+                                        endPosition = lastBoundary;
                                     }
-                                    if (commentPos > -1)
-                                    {
-                                        startPosition = commentPos;
-                                        endPosition = fileText.IndexOf ("\r\n", startPosition);
-                                    }
+                                    else startPosition = 0; endPosition = 0;
+                                }
+
+                                else if (qwm > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("\r\n", endHeader) + 4;
+                                    endPosition = fileText.IndexOf ("IT WAS SENT FROM:");
+                                    // some messages come with the checkin data in the wrong spot
+                                    // so if there is nothing found so far, try the alternative
                                     len = endPosition - startPosition;
                                     if (len <= 0)
                                     {
-                                        startPosition = quotedPrintable;
-                                        if (startPosition > -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        startPosition = fileText.IndexOf ("IT WAS SENT FROM:");
+                                        startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
+                                        startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
+                                        endPosition = fileText.IndexOf ("THIS IS A ONE WAY", startPosition) - 2;
                                     }
                                 }
-                            }
-                            else if (radioGram > -1)
-                            {
-                                startPosition = fileText.IndexOf ("/", quotedPrintable);
-                                startPosition = fileText.LastIndexOf ("\r\n", startPosition)+2;
-                                // endPosition = fileText.IndexOf ("\r\nAR ", startPosition);
-                                endPosition = fileText.LastIndexOf ("/");
-                                endPosition = fileText.IndexOf ("\r\n", endPosition);
-                                radioGramCt++;
-                            }
-                            else
-                            {
-                                // end of the header information as the start of the msg field
-                                if (forwarded < 0)
+                                else if (mi > -1)
                                 {
-                                    startPosition = quotedPrintable;
+                                    startPosition = fileText.IndexOf ("ADDITIONAL INFORMATION");
+                                    startPosition = fileText.IndexOf ("\r\n", startPosition);
+                                    endPosition = fileText.IndexOf ("----", startPosition) - 1;
+                                }
+                                else if (ICS201 > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("PROTECT RESPONDERS FROM THOSE HAZARDS.");
+                                    startPosition = fileText.IndexOf ("\r\n", startPosition);
+                                    endPosition = fileText.IndexOf ("6. PREPARED BY:", startPosition) - 1;
+                                }
+
+                                else if (ICS202 > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("GENERAL SITUATIONAL AWARENESS");
+                                    // startPosition = quotedPrintable;
+                                    startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
+                                    endPosition = fileText.IndexOf ("5. SAFETY PLAN", startPosition) - 1;
+                                }
+
+                                else if (PosReport || copyPR > -1)
+                                {
+                                    //if (copyPR == 0) reminderTxt += "No checkin information/Comment: tag in the message";
+                                    if (commentPos == -1) reminderTxt += "Not a valid Position Report for this exercise. No Comment: tag in the message.\r\n";
+
+                                    // change this to true to skip the point deduction
+                                    bool skip = true;
+                                    // bool skip = true;
+                                    if ((startPR <= 0 || copyPR >= 0) && !skip)
+                                    {
+                                        pointsOff = "\tminus 1 for invalid Position Report\r\n";
+                                        isPerfect = false;
+                                        score -= 1;
+                                    }
+                                    else
+                                    {
+                                        if (commentPos > -1) startPosition = commentPos;
+                                        endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        if (startPosition == endPosition) commentPos = -1;
+                                    }
+
+                                    if (copyPR > -1)
+                                    {
+                                        reminderTxt += "You appear to have copied the QTH message to " + netName + " instead of fowarding the response from Service.\r\n";
+
+                                        if (copyPR >= 0 && commentPos > -1)
+                                        {
+                                            startPosition = commentPos;
+                                            endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        }
+                                        else
+                                        {
+                                            // find alternative msgField location
+                                            startPosition = quotedPrintable;
+                                            if (startPosition > -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        }
+                                        if (startPosition == endPosition) commentPos = -1;
+                                    }
+                                    else
+                                    {
+                                        if (startPR <= 0)
+                                        {
+                                            reminderTxt += "Not a valid Position Report Acknowledgement.\r\n";
+                                            if (QTH) reminderTxt += "This appears to be a copy of the message to QTH instead of a forward of the response from Service\r\n";
+                                            if (!skip)
+                                            {
+                                                pointsOff = "\tminus 1 for invalid Position Report\r\n";
+                                                isPerfect = false;
+                                                score -= 1;
+                                            }
+                                        }
+                                        if (commentPos > -1)
+                                        {
+                                            startPosition = commentPos;
+                                            endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        }
+                                        len = endPosition - startPosition;
+                                        if (len <= 0)
+                                        {
+                                            startPosition = quotedPrintable;
+                                            if (startPosition > -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        }
+                                    }
+                                }
+                                else if (radioGram > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("BT\r\n", quotedPrintable);
+                                    if (startPosition != -1)
+                                    {
+                                        startPosition = startPosition + 4;
+                                        // startPosition = fileText.LastIndexOf ("\r\n", startPosition) + 2;
+                                        // endPosition = fileText.IndexOf ("\r\nAR ", startPosition);
+                                        // endPosition = fileText.LastIndexOf ("/");
+                                        // endPosition = fileText.IndexOf ("\r\n", endPosition);
+                                        endPosition = fileText.IndexOf ("BT\r\n", startPosition);
+                                        radioGramCt++;
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine ("No valid delimiter in Radiogram message! " + messageID);
+                                    }
                                 }
                                 else
                                 {
-                                    // startPosition = forwarded+59;
-                                    startPosition = fileText.IndexOf ("SUBJECT:", forwarded);
-                                    if (startPosition > -1) { startPosition += 9; }
-                                    startPosition = fileText.IndexOf ("\r\n", startPosition);
-                                    if (startPosition > -1) { startPosition += 4; }
-                                    // look for a second Subject tag
-                                    startPosition = fileText.IndexOf ("SUBJECT:", forwarded);
-                                    if (startPosition > -1) { startPosition += 9; }
-                                    startPosition = fileText.IndexOf ("\r\n", startPosition);
-                                    if (startPosition > -1) { startPosition += 4; }
+                                    // end of the header information as the start of the msg field
+                                    if (forwarded < 0)
+                                    {
+                                        startPosition = quotedPrintable;
+                                    }
+                                    else
+                                    {
+                                        // startPosition = forwarded+59;
+                                        startPosition = fileText.IndexOf ("SUBJECT:", forwarded);
+                                        if (startPosition > -1) { startPosition += 9; }
+                                        startPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        if (startPosition > -1) { startPosition += 4; }
+                                        // look for a second Subject tag
+                                        startPosition = fileText.IndexOf ("SUBJECT:", forwarded);
+                                        if (startPosition > -1) { startPosition += 9; }
+                                        startPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        if (startPosition > -1) { startPosition += 4; }
+                                    }
+                                    //endPosition = fileText.IndexOf ("--BOUNDARY", startPosition) - 1;
+                                    endPosition = lastBoundary;
                                 }
-                                endPosition = fileText.IndexOf ("--BOUNDARY", startPosition) - 1;
                             }
-                            len = endPosition - startPosition;
-                            if (len == 0)
-                            {
+                            if (endPosition <= startPosition) endPosition = lastBoundary;
+                            msgField = getMsgField (startPosition, endPosition, messageID, fileText, msgField);
 
-                                Console.Write ("Nothing in the message field: " + messageID + " - " + msgField + "\n");
-                                // try retrieving something from the from field
-                                startPosition = fileText.IndexOf ("FROM:");
-                                if (startPosition > -1) { startPosition += 6; }
-                                endPosition = fileText.IndexOf ("@", startPosition);
-                                len = endPosition - startPosition;
-                            }
-                            if (len == 0)
-                            {
-                                Console.Write ("Trying the subject field: " + file + "\n");
-                                // try retrieving something from the subject field
-                                startPosition = fileText.IndexOf ("SUBJECT:");
-                                if (startPosition > -1) { startPosition += 9; }
-                                endPosition = fileText.IndexOf ("\r\n", startPosition) - 1;
-                                len = fileText.Length;
-                                len = endPosition - startPosition;
-                            }
-
-                            if (len < 0)
-                            {
-                                Console.Write ("endPostion is less than startPosition in: " + file + "\n");
-                                Console.Write ("Break at line 881ish. Press enter to continue. messageID =" + messageID);
-                                input = Console.ReadLine ();
-                                break;
-                            }
-                            msgField = fileText.Substring (startPosition, len);
-                            // int lineBreak = fileText.IndexOf ("=\r\n");
-
-                            msgField = msgField
-                                .Replace ("I AM SAFE AND WELL.", "")
-                                .Replace ("EXERCISE", "")
-                                .Replace ("=\r\n", "") // some messages get a line wrap that messes things up
-                                .Replace ("=20", "") // asci hex space
-                                .Replace ("=0A", "") // asci hex new line / line feed
-                                .Replace ("=0D\r\n", "") // asci hex carriage return
-                                .Replace ("=0", "")  // asci hex null
-                                .Replace ("16. CONTACT INFO:", ",")
-                                .Replace (":", "")
-                                .Replace (";", ",")
-                                .Replace("<","")
-                                .Replace (">", "")
-                                .Trim ()
-                                .Replace ("  ", " ")
-                                .Replace ("  ", " ")
-                                //.Replace(".", "") this causes problems with decimal band freq
-                                .Replace (", ", ",")
-                                .Replace ("[NO CHANGES OR EDITING OF THIS MESSAGE ARE ALLOWED]", "")
-                                .Replace ("[MESSAGE RECEIPT REQUESTED]", "")
-                                .Replace (" ,", ",")
-                                .Replace ("\"", "")
-                                .Replace ("/", ",") // this was to allow Radiogram forms to use "/" since commas are not permitted
-                                .Trim ()
-                                //.Trim(',')
-                                + ",";
                             // string checkinFrom = checkIn;
-                            // 20250113 if (msgField.IndexOf ("GLAWN Ask Template Exercise") > -1) exerciseCompleteCt++;
+                            // if (msgField.IndexOf ("WINLINK") > -1) winlinkCt++;
+                            // if (msgField.IndexOf ("PAT") > -1) patCt++;
+                            // if (msgField.IndexOf ("WOAD") > -1) woadCt++;
+                            // if (msgField.IndexOf ("RADIOMAIL") > -1 || msgField.IndexOf ("RADIO MAIL") > -1) radioMailCt++;
+                            // 20250113 if (msgField.IndexOf ( netName + " Ask Template Exercise") > -1) exerciseCompleteCt++;
                             // 20250127 if (ICS201Ct >0) exerciseCompleteCt++;
-                            if (radioGram > 0) exerciseCompleteCt++;
+                            // if (radioGram > 0) exerciseCompleteCt++; // 20250210 exercise
+                            // if (ICS202 > -1) exerciseCompleteCt++; // 20250217 for exercise
+                            // if (w3w > -1) exerciseCompleteCt++; // 20250303 for W3W exercise
+                            if (ICS203 > -1) exerciseCompleteCt++; // 202500317 exercise
+
                             if (radioGram > 0) msgField = msgField.Replace ("\r\n", " "); // Radiogram chops the message into 40 byte strings, so put it back together
-
-                            checkIn = msgField
-                                .Replace (" ", "")
-                                //.Trim()
-                                //.Trim(',')
-                                //.Trim()+",";
-                                ;
-
-                            // Create a Regex object with the pattern
-                            // and find the first callsign match in the checkIn string
-                            // only use the first line
-                            endPosition = checkIn.IndexOf ("\r\n");
-                            if (endPosition > -1) checkIn = checkIn.Substring (0, endPosition);
-
-
-                            // Split the checkin string into an array of strings
-                            checkIn = removeFieldNumber (checkIn);
-                            string [] checkinItems = checkIn.Split (",");
+                            checkinItems = new string [] { };
+                            len = msgField.Length;
+                            if (len > 0)
+                            {
+                                checkinItems = getCheckinData (len, msgField, checkinItems, newFormat);
+                                checkIn = checkinItems [0].Trim ().Replace ("<", "").Replace (">", "");
+                                // checkIn = checkIn.Trim();
+                            }
+                            else Console.WriteLine ("Message Field is empty in: " + messageID);
 
                             // now check to see if it is a perfect message and deduct points if not
                             // checkin call sign
-                            checkIn = checkinItems [0];
+
                             // look for a callsign typo in the checkin msg
-                            // do not flage checkins with an appended "/x" as a typo, but make sure it is removed to not break Winlink
+                            // do not flag checkins with an appended "/x" as a typo, but make sure it is removed to not break Winlink
+                            var tmpCheckIn = isValidCallsign (checkIn);
+                            if (tmpCheckIn != "") checkIn = tmpCheckIn;
+
                             if (checkIn != fromTxt && xSource != "SMTP" && checkIn != "W5SJT") // W5SJT uses a personal account to login for Tom Green County Emergency Management
                             {
-                                if (checkIn.IndexOf("/") == -1 ) callSignTypo = checkIn;
-                                checkIn = fromTxt; // assume the message checkin/callsign has a typo
-                            }
-
-                            checkIn = isValidCallsign (checkIn);
-                            if (checkIn != "")
-                            {
-                                // checkIn = match.Value;
-                                // if they put my callsign in the message, discard it and look at the xSource tag
-                                // also ignore xSource == "SMTP" because it will be a checkin via internet email
-                                if (checkIn == "KB7WHO" && xSource != "KB7WHO-13" && xSource != "SMTP") { checkIn = xSource; }
-                                if (xSource == "") { xSource = checkIn; }
-
-                            }
-                            else
-                            {
-                                isPerfect = false;
-                                score--;
-                                pointsOff = "\tminus 1 for invalid or missing callsign as the first field - " + checkinItems [0] + "\r\n";
-                                // try the from field since the callsign could not be located in the msg field
-                                startPosition = fileText.IndexOf ("FROM:");
-                                if (startPosition > -1) { startPosition += 6; }
-                                endPosition = fileText.IndexOf ("@", startPosition);
-                                if (endPosition < 0) { endPosition = fileText.IndexOf ("SUBJECT:") - 1; }
-                                len = endPosition - startPosition;
-                                if (len > 0)
+                                bool brokenCheckin = true;
+                                if (ICS202 > -1) // check for the data string in the wrong field
                                 {
-                                    checkIn = fileText.Substring (startPosition, len);
-                                    checkIn = isValidCallsign (checkIn);
+                                    startPosition = fileText.IndexOf ("OPERATIONAL PERIOD COMMAND EMPHASIS:");
+                                    // startPosition = quotedPrintable;
+                                    startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
+                                    endPosition = fileText.IndexOf ("GENERAL SITUATIONAL AWARENESS", startPosition) - 1;
+                                    msgField = getMsgField (startPosition, endPosition, messageID, fileText, msgField);
+                                    len = msgField.Length;
+                                    checkinItems = new string [10];
+                                    checkinItems = getCheckinData (len, msgField, checkinItems, newFormat);
+                                    checkIn = checkinItems [0].Trim ();
+                                    if (checkIn == fromTxt) brokenCheckin = false;
+                                }
+                                endPosition = checkIn.IndexOf ("/");
+                                if (endPosition > -1) checkIn = checkIn.Substring (0, endPosition);
+                                if (brokenCheckin)
+                                {
+                                    if (tempFromTxt == "")
+                                    {
+                                        callSignTypo = fromTxt;
+                                        Console.WriteLine ("1039 fromTxt is null or invalid in :" + messageID);
+                                    }
+                                    else if (tempCheckIn == "")
+                                    {
+                                        callSignTypo = checkIn;
+                                        Console.WriteLine ("1044 checkIn is null or invalid in :" + messageID);
+                                        checkIn = fromTxt;
+                                    }
+                                }
+
+                                // checkIn = isValidCallsign (checkIn);
+                                if (checkIn != "")
+                                {
+                                    // checkIn = match.Value;
+                                    // if they put my callsign in the message, discard it and look at the xSource tag
+                                    // also ignore xSource == "SMTP" because it will be a checkin via internet email
+                                    if (checkIn == "KB7WHO" && xSource != "KB7WHO-13" && xSource != "SMTP") { checkIn = xSource; }
+                                    if (xSource == "") { xSource = checkIn; }
 
                                 }
+                                else
+                                {
+                                    isPerfect = false;
+                                    score--;
+                                    pointsOff = "\tminus 1 for invalid or missing callsign as the first field - " + checkIn + "\r\n";
+                                    // try the from field since the callsign could not be located in the msg field
+                                    startPosition = fileText.IndexOf ("FROM:");
+                                    if (startPosition > -1) { startPosition += 6; }
+                                    endPosition = fileText.IndexOf ("@", startPosition);
+                                    if (endPosition < 0) { endPosition = fileText.IndexOf ("SUBJECT:") - 1; }
+                                    len = endPosition - startPosition;
+                                    if (len > 0)
+                                    {
+                                        checkIn = fileText.Substring (startPosition, len);
+                                        checkIn = isValidCallsign (checkIn);
+
+                                    }
+                                }
                             }
+
                             // debug Console.Write("Start at:"+startPosition+": and end at:"+endPosition+"\nCallsign found: "+checkIn);
                             // eliminate duplicates from the map file                          
                             if (checkIn == "")
                             {
-                                Console.Write ("Callsign not found in: " + file);
+                                Console.Write ("Callsign \"" + checkIn + "\" not found in: " + messageID + "\r\n");
                             }
                             else
                             {
                                 // continue checking for perfect message and point deductions
                                 // int checkInItemsCt = checkinItems.Length;
                                 // int i = 0;
+                                if (newFormat) newFormatCt++;
                                 checkinCountry = "";
                                 checkinCountryLong = "";
                                 len = checkinItems.Length;
                                 if (len < 8)
                                 {
                                     score = score - (8 - len);
-                                    pointsOff += "\tminus " + (8 - len) + " point(s), for missing commas/fields.\r\n";
+                                    pointsOff += "\tminus " + (8 - len) + " point(s), for missing delimiter(s)/fields - see examples below.\r\n";
                                     isPerfect = false;
                                 }
 
                                 if (checkinItems.Length > 2)
                                 {
                                     // array is zero based
-                                    checkinName = isValidName (checkinItems [1]);
+                                    checkinName = isValidName (checkinItems [1]).Trim ();
                                     if (checkinName == "")
                                     {
                                         isPerfect = false;
                                         score--;
-                                        reminderTxt2 = "\tminus 1 point, missing or invalid name in field 2 - " + checkinItems [1] + " 3\r\n";
+                                        reminderTxt2 = "\tminus 1 point, missing or invalid name in field 2 - " + checkinItems [1].Trim () + " 3\r\n";
                                     }
                                 }
 
                                 if (checkinItems.Length >= 6)
                                 {
                                     string countries = "COL,AFG,ALA,ALB,DZA,ASM,AND,AGO,AIA,ATA,ATG,ARG,ARM,ABW,AUS,AUT,AZE,BHS,BHR,BGD,BRB,BLR,BEL,BLZ,BEN,BMU,BTN,BOL,BIH,BWA,BVT,BRA,IOT,VGB,BRN,BGR,BFA,BDI,KHM,CMR,CAN,CPV,BES,CYM,CAF,TCD,CHL,CHN,CXR,CCK,COL,COM,COK,CRI,HRV,CUB,CUW,CYP,CZE,COD,DNK,DJI,DMA,DOM,TLS,ECU,EGY,SLV,GNQ,ERI,EST,SWZ,ETH,FLK,FRO,FSM,FJI,FIN,FRA,GUF,PYF,ATF,GAB,GMB,GEO,DEU,GHA,GIB,GRC,GRL,GRD,GLP,GUM,GTM,GGY,GIN,GNB,GUY,HTI,HMD,HND,HKG,HUN,ISL,IND,IDN,IRN,IRQ,IRL,IMN,ISR,ITA,CIV,JAM,JPN,JEY,JOR,KAZ,KEN,KIR,XXK,KWT,KGZ,LAO,LVA,LBN,LSO,LBR,LBY,LIE,LTU,LUX,MAC,MDG,MWI,MYS,MDV,MLI,MLT,MHL,MTQ,MRT,MUS,MYT,MEX,MDA,MNG,MNE,MSR,MAR,MOZ,MMR,NAM,NRU,NPL,NLD,NCL,NZL,NIC,NER,NGA,NIU,NFK,PRK,MKD,MNP,NOR,OMN,PAK,PLW,PSE,PAN,PNG,PRY,PER,PHL,PCN,POL,PRT,MCO,PRI,QAT,COG,REU,ROU,RUS,RWA,BLM,SHN,KNA,LCA,MAF,SPM,VCT,WSM,SMR,STP,SAU,SEN,SRB,SYC,SLE,SGP,SXM,SVK,SVN,SLB,SOM,ZAF,SGS,KOR,SSD,ESP,LKA,SDN,SUR,SJM,SWE,CHE,SYR,TWN,TJK,TZA,THA,TGO,TKL,TON,TTO,TUN,TUR,TKM,TCA,TUV,UGA,UKR,ARE,GBR,UMI,USA,URY,UZB,VUT,VAT,VEN,VNM,VIR,WLF,ESH,YEM,ZMB,ZWE,";
-                                    checkinCountry = isValidField (checkinItems [5], countries);
+                                    checkinCountry = isValidField (checkinItems [5].Trim (), countries);
                                     countries = "COLOMBIA,BELGIUM,PHILIPPINES,TRINIDAD,GERMANY,ENGLAND,NORWAY,NEW ZEALAND,ST LUCIA,VENEZUELA,AUSTRIA,ROMANIA,CANADA,SERBIA";
-                                    checkinCountryLong = isValidField (checkinItems [5], countries);
+                                    checkinCountryLong = isValidField (checkinItems [5].Trim (), countries);
                                     if (checkinCountry == "")
                                     {
                                         isPerfect = false;
                                         score--;
-                                        pointsOff += "\tminus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - " + checkinItems [5];
+                                        pointsOff += "\tminus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - " + checkinItems [5].Trim ();
                                     }
                                 }
                                 if (checkinItems.Length >= 5)
                                 {
-                                    checkinState = checkinItems [4].Replace (".", "");
+                                    checkinState = checkinItems [4].Replace (".", "").Trim ();
                                     int scoreState = 0;
                                     string tempStr = "";
                                     string tempStr2 = "";
@@ -1221,49 +1288,49 @@ class Winlink_Checkins
 
                                     if (scoreState > 0)
                                     {
-                                        pointsOff += "\tminus 1 point, " + tempStr + "in field 5 -  " + checkinItems [4] + tempStr2 + "\r\n";
+                                        pointsOff += "\tminus 1 point, " + tempStr + "in field 5 -  " + checkinItems [4].Trim () + tempStr2 + "\r\n";
                                         score--;
                                     }
 
                                     if (checkinItems.Length > 4 && checkinCountry == "USA") // check only for USA
                                     {
-                                        checkinCounty = isValidName (checkinItems [3].Replace (" COUNTY", ""));
+                                        checkinCounty = isValidName (checkinItems [3].Replace (" COUNTY", "").Replace ("CO", "").Trim ().Trim ('.'));
                                         if (checkinCounty == "")
                                         {
                                             isPerfect = false;
                                             //score--;
                                             //pointsOff += "\tminus 1 point, invalid county in field 4 - " + checkinItems [3] + "\r\n";
-                                            pointsOff += "\tno deduction for now, invalid county in field 4, use NA or NONE if you don't have one - " + checkinItems [3] + "\r\n";
+                                            pointsOff += "\tno deduction for now, invalid county in field 4, use NA or NONE if you don't have one - " + checkinItems [3].Trim () + "\r\n";
                                         }
                                     }
 
                                     if (checkinItems.Length > 3)
                                     {
-                                        checkinCity = isValidName (checkinItems [2]);
+                                        checkinCity = isValidName (checkinItems [2].Trim ());
                                         if (checkinCity == "")
                                         {
                                             isPerfect = false;
                                             score--;
-                                            pointsOff += "\tminus 1 point, missing or invalid city in field 3 " + checkinItems [2] + "\r\n";
+                                            pointsOff += "\tminus 1 point, missing or invalid city in field 3 " + checkinItems [2].Trim () + "\r\n";
                                         }
                                     }
 
                                 }
                                 if (checkinItems.Length >= 7)
                                 {
-                                    bandStr = checkinItems [6];
+                                    bandStr = checkinItems [6].Trim ();
                                     bandStr = checkBand (bandStr);
                                     if (bandStr == "")
                                     {
                                         isPerfect = false;
                                         score--;
-                                        pointsOff += "\tminus 1 point, missing or invalid band in field 7 - " + checkinItems [6] + "\r\n";
+                                        pointsOff += "\tminus 1 point, missing or invalid band in field 7 - " + checkinItems [6].Trim () + "\r\n";
                                     }
                                     else { checkinItems [6] = bandStr; } // update the item if it was adjusted in the method for minor formatting issues
                                 }
                                 if (checkinItems.Length >= 8)
                                 {
-                                    modeStr = checkinItems [7];
+                                    modeStr = checkinItems [7].Trim ();
                                     modeStr = checkMode (modeStr, bandStr);
                                     string tempStr = "";
                                     if (modeStr == "")
@@ -1273,7 +1340,7 @@ class Winlink_Checkins
                                         if (checkinItems [7] == "VHF") tempStr = ", try \"VARA FM\" or \"PACKET\"";
                                         if (checkinItems [7].Contains ("PACKET")) tempStr = ", try just \"PACKET\"";
                                         if (bandStr == "TELNET") tempStr = ", try SMTP";
-                                        pointsOff += "\tminus 1 point, missing or invalid mode in field 8 - " + checkinItems [7] + tempStr + "\r\n";
+                                        pointsOff += "\tminus 1 point, missing or invalid mode in field 8 - " + checkinItems [7].Trim () + tempStr + "\r\n";
                                     }
                                 }
                                 //    i++;
@@ -1288,7 +1355,6 @@ class Winlink_Checkins
                                     dupeFlag = 1;
                                     dupCt++;
                                 }
-
                                 ct++;
                                 if (localWeather > -1) { localWeatherCt++; }
                                 if (severeWeather > -1) { severeWeatherCt++; }
@@ -1302,7 +1368,9 @@ class Winlink_Checkins
                                 if (rriWR > -1) { rriCt++; }
                                 if (qwm > -1) { qwmCt++; }
                                 if (mi > -1) { miCt++; }
-                                if (ICS201 > -1) ICS201Ct++; 
+                                if (ICS201 > -1) ICS201Ct++;
+                                if (ICS202 > -1) ICS202Ct++;
+                                if (ICS203 > -1) ICS203Ct++;
                                 testString = testString + checkIn + " | ";
                                 // the spreadsheet chokes if the string ends with "|" so
                                 // don't let that happen by writing the first one without a delimiter
@@ -1310,14 +1378,14 @@ class Winlink_Checkins
                                 if (ct == 1)
                                 {
                                     netCheckinString.Append (checkIn);
-                                    netAckString2.Append (checkIn);
+                                    if (noSummary == -1) netAckString2.Append (checkIn);
                                 }
                                 else if (ct > 1 && dupeFlag == 0)
                                 {
                                     netCheckinString.Append ("|" + checkIn);
-                                    netAckString2.Append (";" + checkIn);
+                                    if (noSummary == -1) netAckString2.Append (";" + checkIn);
                                 }
-                                
+
                                 // find message, format for csv file, and save
                                 var msgFieldStart = msgField.IndexOf ("\r\n");
                                 string notFirstLine = "";
@@ -1418,7 +1486,8 @@ class Winlink_Checkins
                                     if (startPosition > -1) { startPosition += 2; }
                                     // need an end position because some messages have a binary attachment that gives a false match
                                     endPosition = fileText.IndexOf ("PRINTABLE", startPosition);
-                                    endPosition = fileText.IndexOf ("--BOUNDARY", endPosition);                                    
+                                    // endPosition = fileText.IndexOf ("--BOUNDARY", endPosition);
+                                    endPosition = lastBoundary;
                                     len = endPosition - startPosition;
                                     if (len > 0)
                                     {
@@ -1426,14 +1495,15 @@ class Winlink_Checkins
                                         {
                                             // Console.WriteLine(messageID+" latitude: "+latitude+" longitude: "+longitude);                                
                                             maidenheadGrid = ExtractMaidenheadGrid (fileText.Substring (startPosition, len));
+                                            if (maidenheadGrid == "invalid") Console.WriteLine (messageID);
                                         }
                                         else
                                         {
                                             // no valid GPS coordinates found, look for a maidenhead grid
                                             maidenheadGrid = ExtractMaidenheadGrid (fileText.Substring (startPosition, len));
+                                            if (maidenheadGrid == "invalid") { Console.WriteLine (messageID); maidenheadGrid = ""; }
                                             if (!string.IsNullOrEmpty (maidenheadGrid))
                                             {
-                                                // Console.WriteLine($"Maidenhead Grid: {maidenheadGrid}");
                                                 // Convert Maidenhead to GPS coordinates
                                                 (latitude, longitude) = MaidenheadToGPS (maidenheadGrid);
                                                 // Console.WriteLine($"No GPS coords found, using Maidenhead Grid: {maidenheadGrid}"+$". From Maidenhead Grid Latitude: {latitude}"+$"  Longitude: {longitude}");
@@ -1466,7 +1536,7 @@ class Winlink_Checkins
                                     }
                                 }
                                 msgField = msgField.Replace ("\r\n", ",");
-                                msgField = removeFieldNumber (msgField);
+                                // msgField = removeFieldNumber (msgField);
                                 msgFieldNumbered = fillFieldNum (msgField);
                                 csvString.Append (checkIn + ":" + messageID + "," + latitude + "," + longitude + "," + locType + "," + msgField + "\r\n");
 
@@ -1523,6 +1593,7 @@ class Winlink_Checkins
                                     .Replace ("METERS", "M")
                                     .Replace ("METER", "M")
                                     .Replace (")", "")
+                                    .Replace ("SMTP", "TELNET")
                                     .Replace ("N/A", "TELNET")
                                     .Replace ("NA", "TELNET")
                                     .Replace ("5GHZ", "5CM")
@@ -1639,6 +1710,8 @@ class Winlink_Checkins
                                     .Replace ("WINLINK", "")
                                     .Replace ("(", "")
                                     .Replace (".", "")
+                                    .Replace ("STMP", "SMTP")
+                                    .Replace ("TELNET", "SMTP")
                                     .Replace ("ARDOP HF", "ARDOP")
                                     .Replace ("VARA VHF", "VARA FM")
                                     .Replace ("VHF VARA", "VARA FM")
@@ -1715,18 +1788,19 @@ class Winlink_Checkins
                                 // Console.WriteLine (checkIn + ":"+messageID+" - "+ ct + " - mapCt:" + mapCt + " - dupCt: " + dupCt);
                                 // xml data
 
-                                if (callSignTypo != "")
+                                if (callSignTypo != "" && noScore == -1)
                                 {
-                                    reminderTxt += "\r\nCheck for a typo in your callsign in the Message Field: " + callSignTypo + " vs " + fromTxt + "\r\n";
-                                    typoString.Append ("\t" + callSignTypo + " vs " + checkIn + " in message " + messageID + "\r\n");
-                                    callSignTypo = "";
-                                }
+                                    reminderTxt += "\r\nCheck for a typo in your callsign in the checkin data: " + callSignTypo + " vs " + checkIn + "\r\n";
+                                    typoString.Append ("\t messageID " + messageID + " - " + checkIn + " vs " + callSignTypo + "\r\n\t\t" + msgField + "\r\n");
+                                    if (msgField.IndexOf ("##") == -1) reminderTxt += "You may not have used the \"##\" marker at the beginning and end of your checkin data. See the examples.";
 
+                                }
+                                if (maidenheadGrid == "invalid") reminderTxt += "\r\nCheck for a typo in your Maidenhead Grid (should be either xx##xx or xx##): " + msgField + "\r\n";
                                 if (noScore == -1)
                                 {
                                     if (isPerfect)
                                     {
-                                        reminderTxt += "\r\nThis is a copy of your message (with numbered fields) and extracted data. \r\nMessage: " + msgFieldNumbered + "\r\n\r\nPerfect Message! Your score is 10.";
+                                        reminderTxt += "\r\nThis is a copy of your message (with numbered fields) and extracted data. \r\nMessage: \r\n" + msgFieldNumbered + "\r\n\r\nPerfect Message! Your score is 10.";
                                         perfectScoreCt++;
                                     }
                                     else
@@ -1736,11 +1810,17 @@ class Winlink_Checkins
                                         //    "Example: xxNxxx, Greg, Sugar City, Madison, ID, USA, HF, VARA HF, DN43du\r\n" +
                                         //    "Example 2: DxNxx,Mario,TONDO,MANILA,NCR,PHL,2M,VARA FM,PK04LO\r\n" +
                                         //    "Example 2: xxNxx,Andre,Burnaby,,BC,CAN,TELNET,SMTP,CN89ud";
+                                        if (msgFieldNumbered == "")
+                                        {
+                                            msgFieldNumbered = "Checkin data was not found";
+                                            if (fileText.IndexOf ("##") > -1) msgFieldNumbered += " - probably because the checkin data did not start with ##.";
+                                            else msgFieldNumbered += " - probably because you didn't use the ## marker at the ##beginning and end## of your checkin data or it was in the wrong place.";
+                                        }
                                         reminderTxt += "\r\n" + "\r\nThis is a copy of your message (with numbered fields) and extracted data. \r\nMessage: " + msgFieldNumbered + "\r\n\r\nYour score is: " + score + "\r\n" + pointsOff +
                                                "\r\nRecommended format reminder in the Comment/Message field:\r\ncallSign, firstname, city, county, state/province/region, country, band, Mode, grid\r\n" +
-                                               "Example: xxNxxx, Greg, Sugar City, Madison, ID, USA, HF, VARA HF, DN43du\r\n" +
-                                               "Example 2: DxNxx,Mario,TONDO,MANILA,NCR,PHL,2M,VARA FM,PK04LO\r\n" +
-                                               "Example 2: xxNxx,Andre,Burnaby,,BC,CAN,TELNET,SMTP,CN89ud";
+                                               "Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##\r\n" +
+                                               "Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##\r\n" +
+                                               "Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud\r\n\t       Weather is great today!##";
                                     }
                                 }
                                 else
@@ -1758,19 +1838,19 @@ class Winlink_Checkins
                                 // Tim Conroy, WB8HRO lives in an assisted living space and does not have easy access to 
                                 // RF and put in a special request to send acknowledgements to his personal email address
                                 if (sendTo == "WB8HRO") sendTo = "xyz191@live.com";
-                                if (sendTo == "KB7WHO" || sendTo == "GLAWN") sendTo = "kb7who@gmail.com";
+                                if (sendTo == xmlXsource || sendTo == netName) sendTo = xmlXsource + "@gmail.com";
                                 // Console.WriteLine("before: "+messageID+   "    after: "+newMessageID);
 
-                                if (isPerfect)
+                                if (isPerfect && noScore == -1)
                                 {
                                     XElement message_list = xmlPerfDoc.Descendants ("message_list").FirstOrDefault ();
                                     message_list.Add (new XElement ("message",
                                         new XElement ("id", newMessageID),
                                         new XElement ("foldertype", "Fixed"),
                                         new XElement ("folder", "Outbox"),
-                                        new XElement ("subject", "GLAWN acknowledgement ", utcDate),
+                                        new XElement ("subject", netName + " acknowledgement ", utcDate),
                                         new XElement ("time", utcDate),
-                                        new XElement ("sender", "GLAWN"),
+                                        new XElement ("sender", netName),
                                         new XElement ("To", sendTo),
                                         new XElement ("rmsoriginator", ""),
                                         new XElement ("rmsdestination", ""),
@@ -1783,26 +1863,23 @@ class Winlink_Checkins
                                         new XElement ("routingflag", ""),
                                         // for testing
                                         // new XElement("source", "KB7WHO"),
-                                        new XElement ("source", "GLAWN"),
+                                        new XElement ("source", netName),
                                         new XElement ("unread", "True"),
                                         new XElement ("flags", "0"),
                                         new XElement ("messageoptions", "False|False|||||"),
                                         new XElement
                                         ("mime", "Date: " + utcDate + "\r\n" +
-                                            "From: GLAWN@winlink.org\r\n" +
+                                            "From: " + netName + "@winlink.org\r\n" +
                                             // for testing
                                             // "From: KB7WHO@winlink.org\r\n"+
-                                            "Subject: GLAWN acknowledgement ", utcDate + "\r\n" +
+                                            "Subject: " + netName + " acknowledgement ", utcDate + "\r\n" +
                                             "To: " + sendTo + "\r\n" +
                                             "Message-ID: " + newMessageID + "\r\n" +
-                                            // Can't edit if not from my call sign
-                                            // "X-Source: GLAWN\r\n"+
-                                            // for testing
                                             "X-Source:" + xmlXsource + "\r\n" +
                                             "X-Location: 43.845831N, 111.745744W(GPS) \r\n" +
                                             "MIME-Version: 1.0\r\n" +
                                             "MIME-Version: 1.0\r\n" +
-                                            "Thank you for checking in to the GLAWN. \r\n" +
+                                            "Thank you for checking in to the " + netName + ". \r\n" +
                                            reminderTxt + "\r\n\r\n" +
                                             "\r\nExtracted Data: " + noScore + "\r\n" +
                                                 "   Latitude: " + latitude + "\r\n" +
@@ -1810,24 +1887,24 @@ class Winlink_Checkins
                                                 "   Band: " + bandStr + "\r\n" +
                                                 "   Mode: " + modeStr + "\r\n" +
                                                 "   Original Message ID: " + messageID + "\r\n" +
-                                                "\r\nGLAWN Current Map: https://tinyurl.com/GLAWN-Map\r\n" +
-                                                "Comments: https://tinyurl.com/GLAWN-comments\r\n" +
-                                                "GLAWN Checkins Report: https://tinyurl.com/Checkins-Report\r\n" +
-                                                "checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins\r\n" +
+                                                "\r\n" + netName + " Current Map: https://tinyurl.com/" + netName + "-Map\r\n" +
+                                                "Comments: https://tinyurl.com/" + netName + "-comments\r\n" +
+                                                netName + " Checkins Report: https://tinyurl.com/Checkins-Report\r\n" +
+                                                "checkins.csv: https://tinyurl.com/" + netName + "-CSV-checkins\r\n" +
                                                 "mapfile.csv: https://tinyurl.com/Current-CSV-mapfile\r\n"
                                         )
                                     ));
                                 }
-                                else
+                                else if (noScore == -1)
                                 {
                                     XElement message_list = xmlDoc.Descendants ("message_list").FirstOrDefault ();
                                     message_list.Add (new XElement ("message",
                                         new XElement ("id", newMessageID),
                                         new XElement ("foldertype", "Fixed"),
                                         new XElement ("folder", "Outbox"),
-                                        new XElement ("subject", "GLAWN acknowledgement ", utcDate),
+                                        new XElement ("subject", netName + " acknowledgement ", utcDate),
                                         new XElement ("time", utcDate),
-                                        new XElement ("sender", "GLAWN"),
+                                        new XElement ("sender", netName),
                                         new XElement ("To", sendTo),
                                         new XElement ("rmsoriginator", ""),
                                         new XElement ("rmsdestination", ""),
@@ -1840,26 +1917,26 @@ class Winlink_Checkins
                                         new XElement ("routingflag", ""),
                                         // for testing
                                         // new XElement("source", "KB7WHO"),
-                                        new XElement ("source", "GLAWN"),
+                                        new XElement ("source", netName),
                                         new XElement ("unread", "True"),
                                         new XElement ("flags", "0"),
                                         new XElement ("messageoptions", "False|False|||||"),
                                         new XElement
                                         ("mime", "Date: " + utcDate + "\r\n" +
-                                            "From: GLAWN@winlink.org\r\n" +
+                                            "From: " + netName + "@winlink.org\r\n" +
                                             // for testing
                                             // "From: KB7WHO@winlink.org\r\n"+
-                                            "Subject: GLAWN acknowledgement ", utcDate + "\r\n" +
+                                            "Subject: " + netName + " acknowledgement ", utcDate + "\r\n" +
                                             "To: " + sendTo + "\r\n" +
                                             "Message-ID: " + newMessageID + "\r\n" +
                                             // Can't edit if not from my call sign
-                                            // "X-Source: GLAWN\r\n"+
+                                            // "X-Source: "+ netName + "\r\n"+
                                             // for testing
                                             "X-Source:" + xmlXsource + "\r\n" +
                                             "X-Location: 43.845831N, 111.745744W(GPS) \r\n" +
                                             "MIME-Version: 1.0\r\n" +
                                             "MIME-Version: 1.0\r\n" +
-                                            "Thank you for checking in to the GLAWN. \r\n" +
+                                            "Thank you for checking in to the " + netName + ". \r\n" +
                                            reminderTxt + "\r\n\r\n" +
                                             "\r\nExtracted Data: " + noScore + "\r\n" +
                                                 "   Latitude: " + latitude + "\r\n" +
@@ -1867,10 +1944,10 @@ class Winlink_Checkins
                                                 "   Band: " + bandStr + "\r\n" +
                                                 "   Mode: " + modeStr + "\r\n" +
                                                 "   Original Message ID: " + messageID + "\r\n" +
-                                                "\r\nGLAWN Current Map: https://tinyurl.com/GLAWN-Map\r\n" +
-                                                "Comments: https://tinyurl.com/GLAWN-comments\r\n" +
-                                                "GLAWN Checkins Report: https://tinyurl.com/Checkins-Report\r\n" +
-                                                "checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins\r\n" +
+                                                "\r\n" + netName + " Current Map: https://tinyurl.com/" + netName + "-Map\r\n" +
+                                                "Comments: https://tinyurl.com/" + netName + "-comments\r\n" +
+                                                netName + " Checkins Report: https://tinyurl.com/Checkins-Report\r\n" +
+                                                "checkins.csv: https://tinyurl.com/" + netName + "-CSV-checkins\r\n" +
                                                 "mapfile.csv: https://tinyurl.com/Current-CSV-mapfile\r\n"
                                         )
                                     ));
@@ -1898,7 +1975,8 @@ class Winlink_Checkins
                                     newCheckIns.Append (checkIn + "\t=countif(indirect(\"R[0]C[10]\",FALSE):indirect(\"R[0]C[63]\",FALSE),\">0\"&\"*\")\t" + checkinName + "\t" + checkinCity + "\t" + checkinCounty + "\t" + checkinState + "\t" + checkinCountry + "\t" + checkinCountryLong + "\t" + bandStr + "\t" + modeStr + "\t" + maidenheadGrid + "\r\n");
 
                                     // update roster.txt to contain the new checkin
-                                    File.AppendAllText ("roster.txt", ":1; " + checkIn);
+                                    // File.AppendAllText ("roster.txt", ";" + checkIn);
+                                    roster = roster + ";" + checkIn;
                                     newCt++;
                                 }
                             }
@@ -1915,14 +1993,14 @@ class Winlink_Checkins
                 junk = 0;
             }
             var tempCT = 15;
-            logWrite.WriteLine ("Current GLAWN Checkins posted: " + utcDate);
+            logWrite.WriteLine ("Current " + netName + " Checkins posted: " + utcDate);
 
             logWrite.WriteLine ("    Total Stations Checking in: " + (ct - dupCt) + "    Duplicates: " + dupCt + "    Total Checkins: " + ct + "    Removal Requests: " + removalCt);
             logWrite.WriteLine ("Non-" + netName + " checkin messages skipped: " + skipped + " (including " + ackCt + " acknowledgements and " + outOfRangeCt + " out of date range messages skipped.)\r\n");
             logWrite.WriteLine ("Total messages processed: " + msgTotal + "\r\n");
-            logWrite.WriteLine ("Row " + tempCT + " goes into GLAWN Spreadsheet at row 1 of the checkin column to be recorded.");
+            logWrite.WriteLine ("Row " + tempCT + " goes into " + netName + " Spreadsheet at row 1 of the checkin column to be recorded.");
             tempCT++;
-            logWrite.WriteLine ("Row " + tempCT + " goes into GLAWN Spreadsheet at row 2 of the checkin column and is the copy" +
+            logWrite.WriteLine ("Row " + tempCT + " goes into " + netName + " Spreadsheet at row 2 of the checkin column and is the copy" +
                     "\r\n\tlist for the checkin acknowledgement.");
             tempCT = tempCT + 2;
             logWrite.WriteLine ("Rows " + tempCT + " and beyond have the list of duplicates found, bounced messages\r\n" +
@@ -1956,10 +2034,16 @@ class Winlink_Checkins
 
             xmlPerfDoc.Save (xmlPerfFile);
             xmlDoc.Save (xmlFile);
+            // rewrite the roster.txt file
+            roster = SortCommaDelimitedString (roster, ";").Trim (';');
+            rosterString = "netName=" + netName + "// This is the name of the winlink net to be processed and the slashes need to be there up against the net name\r\n"
+                    + "callSign=" + xmlXsource + "// This is the callsign (yours) that will be used as the x-source for the XML messages to be imported. Without this, the messages cannot be edited in Winlink after importing\r\n"
+                    + roster;
+            File.WriteAllText (rosterFile, rosterString);
 
             if (duplicates.Length != 0) { logWrite.WriteLine (duplicates + "\r\n"); }
             if (bouncedString.Length != 0) { logWrite.WriteLine ("Messages that bounced: " + bouncedString); }
-            if (newCheckIns.Length != 0) { logWrite.WriteLine ("New Checkins: \r\n" + newCheckIns); }
+            if (newCheckIns.Length != 0) { logWrite.WriteLine ("New Checkins (paste these lines into the New tab of the spreadsheet: \r\n" + newCheckIns); }
             if (skippedString.Length != 0) { logWrite.WriteLine ("Messages Skipped: \r\n" + skippedString); }
             if (removalString.Length != 0) { logWrite.WriteLine ("Requests to be Removed: " + removalString); }
             if (localWeatherCt > 0) { logWrite.WriteLine ("Local Weather Checkins: " + localWeatherCt); }
@@ -1978,14 +2062,20 @@ class Winlink_Checkins
             if (meshCt > 0) { logWrite.WriteLine ("Mesh Checkins: " + meshCt); }
             if (PosRepCt > 0) { logWrite.WriteLine ("Position Report Checkins: " + PosRepCt); }
             if (ICS201Ct > 0) { logWrite.WriteLine ("ICS 201 Checkins: " + ICS201Ct); }
+            if (ICS202Ct > 0) { logWrite.WriteLine ("ICS 202 Checkins: " + ICS202Ct); }
+            if (ICS203Ct > 0) { logWrite.WriteLine ("ICS 203 Checkins: " + ICS203Ct); }
+
             if (radioGram > 0) { logWrite.WriteLine ("Radiogram Checkins: " + radioGramCt); }
-            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickMCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt) + "\r\n");
+            // next line is for the 20250203 exercise
+            // logWrite.WriteLine ("Winlink Express: " + winlinkCt + "  PAT: " + patCt + "  RadioMail: " + radioMailCt + "  WoAD: " + woadCt + "\r\n");
+            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickMCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct) + "\r\n");
             //var totalValidGPS = mapCt-noGPSCt;
             logWrite.WriteLine ("Total Checkins with a perfect message: " + perfectScoreCt);
+            logWrite.WriteLine ("Total Checkins using the new format: " + newFormatCt);
             logWrite.WriteLine ("Total Checkins with a geolocation: " + (mapCt - noGPSCt));
             // logWrite.WriteLine ("Total Checkins with a geolocation: " + (mapCt - noGPSCt));
-            if (exerciseCompleteCt > 0) { logWrite.WriteLine ("Successful Exercise Participation" + exerciseCompleteCt); }
-            
+            if (exerciseCompleteCt > 0) { logWrite.WriteLine ("Successful Exercise Participation: " + exerciseCompleteCt); }
+
             logWrite.WriteLine ("Total Checkins with something in the band field: " + bandCt);
             logWrite.WriteLine ("Total Checkins with something in the mode field: " + modeCt);
             // logWrite.WriteLine("\r\n++++++++++++++++\r\nmsgField not properly formatted for the following: \r\n-------------------------------");
@@ -2004,8 +2094,9 @@ class Winlink_Checkins
         Console.ReadLine ();
     }
     //public static class Globals
-    public static int IndexOfNthSB (string input,
-             char value, int startIndex, int nth)
+    public static int IndexOfNthSB (string input, char value, int startIndex, int nth)
+    // This method finds the nth occurrence of a character in a string. 
+
     {
         if (nth < 1)
             throw new NotSupportedException ("Param 'nth' must be greater than 0!");
@@ -2020,69 +2111,70 @@ class Winlink_Checkins
         return -1;
     }
     static DateTime GetValidDate ()
+    // This method prompts the user for a date in YYYYMMDD format and ensures it’s within three weeks (the +- 21) of today.
     {
-        DateTime date = default;  // Initialize date to its default value
+        DateTime date = default;
         bool isValid = false;
 
         while (!isValid)
         {
             string input = Console.ReadLine ();
             DateTime todayDate = DateTime.Today;
-            int dateCompare = 0;
 
-            // Validate using the specific format YYYYMMDD
             if (DateTime.TryParseExact (input, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out date))
             {
+                int dateCompare = DateTime.Compare (date, todayDate.AddDays (-21));
+                if (dateCompare < 0)
+                {
+                    Console.WriteLine ("Invalid date: " + date + " Must be within three weeks of today. Please try again.");
+                    continue;
+                }
+                dateCompare = DateTime.Compare (todayDate.AddDays (21), date);
+                if (dateCompare < 0)
+                {
+                    Console.WriteLine ("Invalid date: " + input + " Must be within three weeks of today. Please try again.");
+                    continue;
+                }
                 isValid = true;
-                dateCompare = DateTime.Compare (date, todayDate.AddDays (-14));
-                if (dateCompare < 0)
-                {
-                    isValid = false;
-                    Console.WriteLine ("Invalid date: " + date + " Must be within two weeks of today. Please try again.");
-                }
-                dateCompare = DateTime.Compare (todayDate.AddDays (14), date);
-                if (dateCompare < 0)
-                {
-                    isValid = false;
-                    Console.WriteLine ("Invalid date: " + input + " Must be within two weeks of today.  Please try again.");
-                }
             }
             else
             {
-                Console.WriteLine ("Invalid date format. " + input + "Please use YYYYMMDD format and try again.");
+                Console.WriteLine ("Invalid date format: " + input + ". Please use YYYYMMDD format and try again.");
             }
         }
         return date;
     }
-
-    static void SaveDate (DateTime date)
-    {
-        string filePath = "dates.txt";
-        try
-        {
-            using (StreamWriter writer = new StreamWriter (filePath, true))
-            {
-                writer.WriteLine (date.ToString ("yyyy-MM-dd"));
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine ($"An error occurred while saving the date: {ex.Message}");
-        }
-    }
+    //static void SaveDate (DateTime date)
+    //{
+    //    string filePath = "dates.txt";
+    //    try
+    //    {
+    //        using (StreamWriter writer = new StreamWriter (filePath, true))
+    //        {
+    //            writer.WriteLine (date.ToString ("yyyy-MM-dd"));
+    //        }
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Console.WriteLine ($"An error occurred while saving the date: {ex.Message}");
+    //    }
+    //}
 
 
     public static string isValidCallsign (string input)
+    // This method validates a callsign using the regex pattern \b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b. 
     {
         string pattern = @"\b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b";
         Regex regexCallSign = new Regex (pattern, RegexOptions.IgnoreCase);
         Match match = regexCallSign.Match (input);
         if (match.Success)
-        { input = match.Value; }
-        else { input = ""; }
-        return input;
+        {
+            return match.Value.ToUpper ();
+        }
+        return "";
     }
     public static string isValidName (string input)
+    // This method removes numbers and newlines from a name field:
     {
         string pattern = @".*\d.*(\r?\n)?";
         input = input.ToUpper ();
@@ -2092,7 +2184,7 @@ class Winlink_Checkins
         // if (match.Success)
         // { input = match.Value; }
         // else { input = ""; }
-        return result;
+        return result.Trim ();
     }
     // public static string isValidCountry (string input)
     // {
@@ -2103,29 +2195,30 @@ class Winlink_Checkins
     // }
 
     public static string isValidField (string input, string pattern)
+    // This method checks if a field (e.g., country, state) exists in a predefined list
     {
         input = input.ToUpper ().Trim ().Trim ('.');
-        pattern = pattern.ToUpper ();
-        pattern += ",NA,NONE";
-        int found = pattern.IndexOf (input);
-        if (found == -1) input = "";
+        pattern = pattern.ToUpper () + ",NA,NONE";
+        int found = pattern.IndexOf (input + ",");
+        if (found == -1) return "";
         return input;
     }
     static string ExtractMaidenheadGrid (string input)
+    // This method extracts a Maidenhead grid (e.g., DN43du) from the input string
     {
         // Define the regular expression for Maidenhead grid locator (4 or 6 character grids)
-        //Regex regex = new Regex (@"\b([A-R]{2}\d{2}[A-X]{0,2})\b", RegexOptions.IgnoreCase); // 6 char grid
-        Regex regex = new Regex (@"\b([A-R]{2}\d{2}[A-X]{0,2}[\dA-X]{0,4})\b", RegexOptions.IgnoreCase);
+        Regex regex = new Regex (@"\b([A-R]{2}\d{2}[A-X]{0,2}[a-xA-X]{0,2})\b", RegexOptions.IgnoreCase);
 
         // Search for a match in the input string
         Match match = regex.Match (input);
 
         if (match.Success)
         {
-            if (match.Value.Length < 4 || match.Value.Length % 2 != 0)
+            if (match.Value.Length < 4 || match.Value.Length % 2 != 0 || match.Value.Length > 6)
             {
-                Console.Write ("Invalid Maidenhead grid format in " + input);
-                return ("");
+                if (match.Value.Length == 5) return match.Value.Substring (0, 4).ToUpper ();
+                Console.WriteLine ("Invalid Maidenhead grid format - must be either 4 or 6 characters");
+                return "invalid";
             }
             return match.Value.ToUpper (); // Return the Maidenhead grid in uppercase
         }
@@ -2134,10 +2227,11 @@ class Winlink_Checkins
     }
 
     static (double, double) MaidenheadToGPS (string maidenhead)
+    // This method converts a Maidenhead grid to latitude and longitude
     {
         if (maidenhead.Length < 4 || maidenhead.Length % 2 != 0)
         {
-            Console.Write ("Invalid Maidenhead grid format in");
+            Console.WriteLine ("Invalid Maidenhead grid format in: " + maidenhead);
             return (0, 0);
         }
         else
@@ -2165,13 +2259,16 @@ class Winlink_Checkins
     static string fillFieldNum (string input)
     {
         // find the first 8 commas and append a field number to each occurence
-        var ct = 1;
-        var startPosition = 0;
-        // Console.WriteLine("input before: "+input);
-        input = input + ",";
+        // This method adds field numbers to a delimited string for debugging:
+        int ct = 1;
+        string delimiter = "|";
+        char chDelimiter = Convert.ToChar (delimiter);
+        int startPosition = 0;
+        if (input == "") return input;
+        input = input.Replace (",", delimiter) + delimiter;
         while (ct < 10)
         {
-            startPosition = input.IndexOf (",", startPosition);
+            startPosition = input.IndexOf (delimiter, startPosition);
             if (startPosition > 0)
             {
                 input = input.Insert (startPosition, " " + ct);
@@ -2182,7 +2279,8 @@ class Winlink_Checkins
             startPosition = startPosition + 3;
         }
         // Console.WriteLine("input after: "+input);
-        return input.Trim (',');
+        //return input.Trim (chDelimiter);
+        return input.Trim ('|');
     }
     public string Reverse (string text)
     {
@@ -2195,10 +2293,10 @@ class Winlink_Checkins
         return reverse;
     }
     public static string ScrambleWord (string word)
+    // This method scrambles a string (used for generating new message IDs)
     {
         char [] chars = new char [word.Length];
         // var now = TimeOnly.FromDateTime(DateTime.Now);
-        //Random rand = new Random(10000);
         Random rand = new Random (); // Seed is automatically set to current time
         int index = 0;
         while (word.Length > 0)
@@ -2214,24 +2312,19 @@ class Winlink_Checkins
         return new String (chars);
     }
     public static class Common
+    // This utility method converts a string to a double
     {
-        public static double ConvertToDouble (string Value)
+        public static double ConvertToDouble (string value)
         {
-            if (Value == null)
-            {
+            if (string.IsNullOrEmpty (value))
                 return 0;
-            }
-            else
+            if (double.TryParse (value, out double outVal))
             {
-                double OutVal;
-                double.TryParse (Value, out OutVal);
-
-                if (double.IsNaN (OutVal) || double.IsInfinity (OutVal))
-                {
+                if (double.IsNaN (outVal) || double.IsInfinity (outVal))
                     return 0;
-                }
-                return OutVal;
+                return outVal;
             }
+            return 0;
         }
     }
     public static string SortCommaDelimitedString (string input, string delimiter)
@@ -2283,6 +2376,7 @@ class Winlink_Checkins
             .Replace ("METERS", "M")
             .Replace ("METER", "M")
             .Replace ("TELENET", "TELNET") // common typo
+            .Replace ("TELENT", "TELNET")
             .Replace (" ", "")
             .Replace ("(", "")
             .Replace (")", "")
@@ -2313,6 +2407,7 @@ class Winlink_Checkins
             case "SHF":
             case "UHF":
             case "VHF":
+            case "EMAIL":
                 break;
 
             case "160":
@@ -2442,24 +2537,30 @@ class Winlink_Checkins
         }
         return input;
     }
-    public static string removeFieldNumber (string input)
+    public static string [] removeFieldNumber (string [] input)
     {
         // Split the string into an array of strings
-        string [] items = input.Split (",");
+        // string [] items;
+        // if (input.IndexOf ("|") > -1)
+        // {
+        // items = input.Split ("|");
+        // }
+        // else items = input.Split (",");
+
         // remove the field number from each
-        int len = items.Length;
-        int i = 0;
+        int len = input.Length;
+        // int i = 0;
         string pattern = @"\s\d$";
-        foreach (string item in items)
+        for (int i = 0; i < len; i++)
         {
-            items [i] = Regex.Replace (item, pattern, "");
+            input [i] = Regex.Replace (input [i], pattern, "");
             i++;
-            if (i > 9) { break; }
+            // if (i == len) { break; }
         }
 
         // Join the sorted array back into a string
-        string result = string.Join (",", items);
-        return result;
+        // string result = string.Join (",", items);
+        return input;
     }
     static void RemoveLineContaining (StringBuilder sb, string callSign)
     {
@@ -2531,6 +2632,98 @@ class Winlink_Checkins
             resultStr = result.ToString ("0.######");
         }
         return resultStr;
+    }
+    public static string getMsgField (int startPosition, int endPosition, string messageID, string fileText, string msgField)
+    {
+        int len = 0;
+        if (startPosition > -1) len = endPosition - startPosition; else len = 0;
+        if (len == 0)
+        {
+
+            Console.Write ("Nothing in the message field: " + messageID + " - " + msgField + "\n");
+            // try retrieving something from the from field
+            startPosition = fileText.IndexOf ("FROM:");
+            if (startPosition > -1) { startPosition += 6; }
+            endPosition = fileText.IndexOf ("@", startPosition);
+            len = endPosition - startPosition;
+        }
+        if (len == 0)
+        {
+            Console.Write ("Trying the subject field: " + messageID + "\n");
+            // try retrieving something from the subject field
+            startPosition = fileText.IndexOf ("SUBJECT:");
+            if (startPosition > -1) { startPosition += 9; }
+            endPosition = fileText.IndexOf ("\r\n", startPosition) - 1;
+            len = fileText.Length;
+            len = endPosition - startPosition;
+        }
+
+        if (len < 0)
+        {
+            Console.Write ("endPostion is less than startPosition in: " + messageID + "\n");
+            Console.Write ("Break at line 2611ish. Press enter to continue. messageID =" + messageID);
+            string input = Console.ReadLine ();
+            return "";
+
+        }
+        msgField = fileText.Substring (startPosition, len);
+        // int lineBreak = fileText.IndexOf ("=\r\n");
+
+        msgField = msgField
+            .Replace ("I AM SAFE AND WELL.", "")
+            .Replace ("EXERCISE", "")
+            .Replace ("=\r\n", "") // some messages get a line wrap that messes things up
+            .Replace ("=20", "") // asci hex space
+            .Replace ("=0A", "") // asci hex new line / line feed
+            .Replace ("=0D\r\n", "") // asci hex carriage return
+            .Replace ("=0", "")  // asci hex null
+            .Replace ("16. CONTACT INFO:", ",")
+            .Replace (":", "")
+            .Replace (";", ",")
+            .Replace ("<", "")
+            .Replace (">", "")
+            .Replace ("!", "|")
+            .Trim ()
+            .Replace ("   ", " ")
+            .Replace ("  ", " ")
+            //.Replace(".", "") this causes problems with decimal band freq
+            .Replace (", ", ",")
+            .Replace (" ,", ",")
+            .Replace ("[NO CHANGES OR EDITING OF THIS MESSAGE ARE ALLOWED]", "")
+            .Replace ("[MESSAGE RECEIPT REQUESTED]", "")
+            .Replace (" |", "|")
+            .Replace ("| ", "|")
+            .Replace ("\"", "")
+            .Replace ("/", ",") // this was to allow Radiogram forms to use "/" since commas are not permitted
+                                // .Replace ("\r\n", "") // some messages get a line wrap that messes things up
+            .Trim ()
+            .Trim (',')
+            .Trim ('|');
+        // len = msgField.Length;
+        return (msgField);
+    }
+    public static string [] getCheckinData (int len, string msgField, string [] checkinItems, bool newFormat)
+    {// endPosition, msgField, checkIn, checkinItems
+        string checkIn = msgField;
+        // Create a Regex object with the pattern
+        // and find the first callsign match in the checkIn string
+        // only use the first line
+        if (checkIn.IndexOf ("\r\n") != -1) len = checkIn.IndexOf ("\r\n");
+        if (len > 0) checkIn = checkIn.Substring (0, len);
+
+        // Split the checkin string into an array of strings
+        if (checkIn.IndexOf ("|") > -1)
+        {
+            checkinItems = checkIn.Split ("|");
+            newFormat = true;
+        }
+        // else if (checkIn.IndexOf ("!") > -1) checkinItems = checkIn.Split ("!");
+        else checkinItems = checkIn.Split (",");
+        // remove field numbers if someone sent them in
+        checkinItems = removeFieldNumber (checkinItems);
+
+
+        return checkinItems;
     }
 
 }
