@@ -1,1 +1,7 @@
 "spreadsheet google api credential key winlink-checkins-5b2879ce9516.json" 
+# Ignore Debug folder and its contents
+Debug/
+bin/
+obj/
+# Ignore all .mime files anywhere in the repo
+*.mime
