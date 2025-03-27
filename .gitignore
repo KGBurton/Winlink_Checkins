@@ -3,5 +3,6 @@
 Debug/
 bin/
 obj/
+.vs/
 # Ignore all .mime files anywhere in the repo
 *.mime
