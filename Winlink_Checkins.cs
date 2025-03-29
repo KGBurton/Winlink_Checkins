@@ -2828,7 +2828,7 @@ class Winlink_Checkins
     // Helper method to convert week number to column letter, starting at L for week 1
     private static string GetColumnLetter (int weekNumber)
     {
-        int adjustedColumnNumber = weekNumber + 11; // Offset by 11 to start at L (12th column)
+        int adjustedColumnNumber = weekNumber + 14; // Offset by 14 to start at O (15th column)
         string columnLetter = "";
         while (adjustedColumnNumber > 0)
         {
