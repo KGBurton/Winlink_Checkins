@@ -31,6 +31,9 @@ using System.Globalization;
 using System.Xml.Linq;
 using System;
 using System.Diagnostics.Metrics;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Sheets.v4;
@@ -49,14 +52,13 @@ class Winlink_Checkins
         bool isValid = false;
         string input;
 
-        Console.WriteLine ("Enter the start date - must be within three weeks of today (yyyymmdd): ");
-        startDate = GetValidDate ();
+        // Console.WriteLine ("Enter the start date - must be within three weeks of today (yyyymmdd): ");
+        startDate = GetValidDate (21);
         //startDate = startDate.ToUniversalTime();
 
         while (!isValid)
         {
-            Console.WriteLine ("Enter the end date - must be within three weeks of today (yyyymmdd): ");
-            endDate = GetValidDate ();
+            endDate = GetValidDate (0);
             int startDateCompare = DateTime.Compare (startDate, endDate);
             if (startDateCompare >= 0)
             {
@@ -1805,7 +1807,8 @@ class Winlink_Checkins
                                 {
                                     if (isPerfect)
                                     {
-                                        reminderTxt += "\r\nThis is a copy of your message (with numbered fields) and extracted data. \r\nMessage: \r\n" + msgFieldNumbered + "\r\n\r\nPerfect Message! Your score is 10.";
+                                        // reminderTxt += "\r\nThis is a copy of your message (with numbered fields) and extracted data. \r\nMessage: \r\n" + msgFieldNumbered + "\r\n\r\nPerfect Message! Your score is 10.";
+                                        reminderTxt += "\r\nThis is a copy of your message  and extracted data. \r\nMessage: \r\n" + msgField + "\r\n\r\nPerfect Message! Your score is 10.";
                                         perfectScoreCt++;
                                     }
                                     else
@@ -1821,7 +1824,7 @@ class Winlink_Checkins
                                             if (fileText.IndexOf ("##") > -1) msgFieldNumbered += " - probably because the checkin data did not start with ##.";
                                             else msgFieldNumbered += " - probably because you didn't use the ## marker at the ##beginning and end## of your checkin data or it was in the wrong place.";
                                         }
-                                        reminderTxt += "\r\n" + "\r\nThis is a copy of your message (with numbered fields) and extracted data. \r\nMessage: " + msgFieldNumbered + "\r\n\r\nYour score is: " + score + "\r\n" + pointsOff +
+                                        reminderTxt += "\r\n" + "\r\nThis is a copy of your message and extracted data. \r\nMessage: " + msgField + "\r\n\r\nYour score is: " + score + "\r\n" + pointsOff +
                                                "\r\nRecommended format reminder in the Comment/Message field:\r\ncallSign, firstname, city, county, state/province/region, country, band, Mode, grid\r\n" +
                                                "Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##\r\n" +
                                                "Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##\r\n" +
@@ -2042,10 +2045,10 @@ class Winlink_Checkins
             string spreadsheetId = "1e0PJVqMGZhTzxwIVDf9if1dSSnG8y1U5Zf6pojB5Txc"; // Your new ID
             if (!string.IsNullOrWhiteSpace (spreadsheetId))
             {
-                UpdateGoogleSheet (netCheckinString, spreadsheetId, startDate, ct);
-                // UpdateGoogleSheet (netCheckinString, spreadsheetId, startDate);
-                // AppendToNewTab (newCheckIn, spreadsheetId); // this would need to be in a different place
-                AppendToNewTab (newCheckIns.ToString (), spreadsheetId); // Assuming newCheckIns is a StringBuilder
+                UpdateGoogleSheet (netCheckinString, newCheckIns, spreadsheetId, endDate, ct);
+                // The AppendToNewTab call is already handled inside UpdateGoogleSheet, so remove these:
+                // AppendToNewTab(newCheckIns.ToString(), spreadsheetId); // Redundant
+                // AppendToNewTab (newCheckIns.ToString (), spreadsheetId, service);
             }
 
             xmlPerfDoc.Save (xmlPerfFile);
@@ -2126,29 +2129,38 @@ class Winlink_Checkins
         }
         return -1;
     }
-    static DateTime GetValidDate ()
+    static DateTime GetValidDate (int offset)
     // This method prompts the user for a date in YYYYMMDD format and ensures it’s within three weeks (the +- 21) of today.
     {
         DateTime date = default;
         bool isValid = false;
-
+        // Console.WriteLine ("Enter the start date - must be within three weeks of today (yyyymmdd): ");
         while (!isValid)
         {
+            if (offset == 0)
+            {
+                Console.WriteLine ("Enter the end date - must be today or earlier and before the next net's Monday (yyyymmdd): ");
+            }
+            else
+            {
+                Console.WriteLine ("Enter the start date - must be within three weeks of today (yyyymmdd): ");
+            }
+
             string input = Console.ReadLine ();
             DateTime todayDate = DateTime.Today;
 
             if (DateTime.TryParseExact (input, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out date))
             {
-                int dateCompare = DateTime.Compare (date, todayDate.AddDays (-21));
+                int dateCompare = DateTime.Compare (date, todayDate.AddDays (-offset));
                 if (dateCompare < 0)
                 {
                     Console.WriteLine ("Invalid date: " + date + " Must be within three weeks of today. Please try again.");
                     continue;
                 }
-                dateCompare = DateTime.Compare (todayDate.AddDays (21), date);
+                dateCompare = DateTime.Compare (todayDate.AddDays (offset), date);
                 if (dateCompare < 0)
                 {
-                    Console.WriteLine ("Invalid date: " + input + " Must be within three weeks of today. Please try again.");
+                    Console.WriteLine ("Invalid date: " + input + " must be today or earlier and before the next net's Monday (yyyymmdd). Please try again.");
                     continue;
                 }
                 isValid = true;
@@ -2570,7 +2582,7 @@ class Winlink_Checkins
         for (int i = 0; i < len; i++)
         {
             input [i] = Regex.Replace (input [i], pattern, "");
-            i++;
+            // i++;
             // if (i == len) { break; }
         }
 
@@ -2733,6 +2745,13 @@ class Winlink_Checkins
             checkinItems = checkIn.Split ("|");
             newFormat = true;
         }
+        else if (checkIn.IndexOf ("\t") > -1)
+        {
+            {
+                checkinItems = checkIn.Split ("\t");
+                newFormat = true;
+            }
+        }
         // else if (checkIn.IndexOf ("!") > -1) checkinItems = checkIn.Split ("!");
         else checkinItems = checkIn.Split (",");
         // remove field numbers if someone sent them in
@@ -2742,7 +2761,7 @@ class Winlink_Checkins
         return checkinItems;
     }
     // Method to update Google Sheet with check-in data
-    private static void UpdateGoogleSheet (StringBuilder netCheckinString, string spreadsheetId, DateTime startDate, int checkinCount)
+    private static void UpdateGoogleSheet (StringBuilder netCheckinString, StringBuilder newCheckins, string spreadsheetId, DateTime endDate, int checkinCount)
     {
         try
         {
@@ -2753,71 +2772,203 @@ class Winlink_Checkins
                 return;
             }
 
-            GoogleCredential credential;
-            using (var stream = new FileStream (credentialsPath, FileMode.Open, FileAccess.Read))
+            var service = new SheetsService (new BaseClientService.Initializer
             {
-                credential = GoogleCredential.FromStream (stream).CreateScoped (SheetsService.Scope.Spreadsheets);
-            }
-
-            var service = new SheetsService (new BaseClientService.Initializer ()
-            {
-                HttpClientInitializer = credential,
-                ApplicationName = "Winlink Checkins",
+                HttpClientInitializer = GoogleCredential.FromFile (credentialsPath).CreateScoped (SheetsService.Scope.Spreadsheets),
+                ApplicationName = "Winlink Checkins"
             });
 
-            string yearTab = startDate.Year.ToString ();
-            int weekNumber = CultureInfo.CurrentCulture.Calendar.GetWeekOfYear (
-                startDate,
-                CalendarWeekRule.FirstFourDayWeek,
-                DayOfWeek.Monday);
+            // Define net week Mondays (Jan 6, 2025, to Dec 29, 2025)
+            DateTime [] netMondays = Enumerable.Range (0, 53)
+                .Select (w => new DateTime (endDate.Year, 1, 6).AddDays (w * 7))
+                .ToArray ();
 
-            if (weekNumber > 53)
-            {
-                Console.WriteLine ($"Warning: Week number {weekNumber} exceeds 53 (column BL). Skipping Google Sheet update.");
-                return;
-            }
+            // Find the Monday of the net week
+            DateTime adjustedEndDate = endDate;
+            if (endDate.DayOfWeek == DayOfWeek.Sunday) adjustedEndDate = endDate.AddDays (-1);
+            else if (endDate.DayOfWeek == DayOfWeek.Monday) adjustedEndDate = endDate.AddDays (-2);
+
+            DateTime monday = netMondays
+                .Where (m => m <= adjustedEndDate)
+                .OrderByDescending (m => m)
+                .First ();
+
+            int weekNumber = Array.IndexOf (netMondays, monday) + 1;
+            if (weekNumber < 1) weekNumber = 1;
+            if (weekNumber > 53) weekNumber = 53;
 
             string columnLetter = GetColumnLetter (weekNumber);
+            string yearTab = endDate.Year.ToString ();
 
-            var sheetRequest = service.Spreadsheets.Get (spreadsheetId);
-            var sheetResponse = sheetRequest.Execute ();
-            bool tabExists = sheetResponse.Sheets.Any (s => s.Properties.Title == yearTab);
-
-            if (!tabExists)
+            // Append new check-in data to "New" tab with trimmed grid
+            string newCheckinsStr = newCheckins.ToString ();
+            string newTabRange = null;
+            if (!string.IsNullOrWhiteSpace (newCheckinsStr))
             {
-                var addSheetRequest = new Request
-                {
-                    AddSheet = new AddSheetRequest
-                    {
-                        Properties = new SheetProperties { Title = yearTab }
-                    }
-                };
-                var batchUpdate = new BatchUpdateSpreadsheetRequest { Requests = new List<Request> { addSheetRequest } };
-                service.Spreadsheets.BatchUpdate (batchUpdate, spreadsheetId).Execute ();
-                Console.WriteLine ($"Created new tab: {yearTab}");
+                newTabRange = AppendToNewTab (newCheckinsStr, spreadsheetId, service);
             }
 
-            // Update row 1 with pipe-delimited string
-            string checkinData = netCheckinString.ToString ().Trim ('|');
-            var valuesRow1 = new List<IList<object>> { new List<object> { checkinData } };
-            var valueRangeRow1 = new ValueRange { Values = valuesRow1 };
-            string rangeRow1 = $"{yearTab}!{columnLetter}1";
+            // Update "2025" tab rows 1 and 2 with netCheckinString
+            string pipeDelimited = netCheckinString.ToString ().Replace ('\t', '|');
+            string row1Range = $"{yearTab}!{columnLetter}1";
+            var row1ValueRange = new ValueRange
+            {
+                Values = new List<IList<object>> { new List<object> { pipeDelimited } }
+            };
+            var row1Update = service.Spreadsheets.Values.Update (row1ValueRange, spreadsheetId, row1Range);
+            row1Update.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
+            row1Update.Execute ();
 
-            var requestRow1 = service.Spreadsheets.Values.Update (valueRangeRow1, spreadsheetId, rangeRow1);
-            requestRow1.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.RAW;
-            requestRow1.Execute ();
+            string semiDelimited = netCheckinString.ToString ().Replace ('\t', ';');
+            string row2Range = $"{yearTab}!{columnLetter}2";
+            var row2ValueRange = new ValueRange
+            {
+                Values = new List<IList<object>> { new List<object> { semiDelimited } }
+            };
+            var row2Update = service.Spreadsheets.Values.Update (row2ValueRange, spreadsheetId, row2Range);
+            row2Update.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
+            row2Update.Execute ();
 
-            // Update row 2 with semicolon-delimited string by replacing pipes
-            string semicolonDelimited = checkinData.Replace ("|", ";");
-            var valuesRow2 = new List<IList<object>> { new List<object> { semicolonDelimited } };
-            var valueRangeRow2 = new ValueRange { Values = valuesRow2 };
-            string rangeRow2 = $"{yearTab}!{columnLetter}2";
+            Console.WriteLine ($"Updated {yearTab}!{columnLetter}1 with pipe-delimited and {columnLetter}2 with semicolon-delimited netCheckinString");
 
-            var requestRow2 = service.Spreadsheets.Values.Update (valueRangeRow2, spreadsheetId, rangeRow2);
-            requestRow2.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.RAW;
-            requestRow2.Execute ();
+            // Insert latest "New" tab row into yearly tab if newCheckins was appended
+            if (!string.IsNullOrWhiteSpace (newCheckinsStr) && newTabRange != null)
+            {
+                // Get the latest row from "New" tab with formulas
+                string [] rangeParts = newTabRange.Split ('!');
+                int newTabRowNum = int.Parse (rangeParts [1].Split (':') [0].Substring (1));
+                string newTabRowRange = $"{rangeParts [0]}!A{newTabRowNum}:BO{newTabRowNum}";
+                var getRequest = service.Spreadsheets.Values.Get (spreadsheetId, newTabRowRange);
+                getRequest.ValueRenderOption = SpreadsheetsResource.ValuesResource.GetRequest.ValueRenderOptionEnum.FORMULA;
+                var newTabResponse = getRequest.Execute ();
+                var newTabRow = newTabResponse.Values?.FirstOrDefault ();
 
-            Console.WriteLine ($"Updated Google Sheet - {yearTab} tab, column {columnLetter}: row 1 with {checkinCount} check-ins, row 2 with {semicolonDelimited.Length} chars");
+                if (newTabRow != null)
+                {
+                    // Get existing callsigns from yearly tab for sorting
+                    string yearlyRange = $"{yearTab}!A6:A";
+                    var yearlyResponse = service.Spreadsheets.Values.Get (spreadsheetId, yearlyRange).Execute ();
+                    var values = yearlyResponse?.Values ?? new List<IList<object>> ();
+
+                    string newCallsign = newTabRow [0].ToString ();
+                    bool isDuplicate = false;
+                    int existingRow = -1;
+                    for (int i = 0; i < values.Count; i++)
+                    {
+                        if (values [i].Count > 0 && values [i] [0].ToString () == newCallsign)
+                        {
+                            isDuplicate = true;
+                            existingRow = 6 + i;
+                            break;
+                        }
+                    }
+
+                    if (isDuplicate)
+                    {
+                        Console.WriteLine ($"Skipped insertion of {newCallsign} into {yearTab} tab - already exists at row {existingRow}");
+                    }
+                    else
+                    {
+                        int insertRow = 6;
+                        for (int i = 0; i < values.Count; i++)
+                        {
+                            if (values [i].Count > 0 && string.Compare (values [i] [0].ToString (), newCallsign, StringComparison.Ordinal) > 0)
+                            {
+                                insertRow = 6 + i;
+                                break;
+                            }
+                            if (i == values.Count - 1) insertRow = 6 + values.Count;
+                        }
+
+                        // Adjust formulas in newTabRow for the target row
+                        var adjustedRow = new List<object> ();
+                        foreach (var cell in newTabRow)
+                        {
+                            string cellValue = cell.ToString ();
+                            if (cellValue.StartsWith ("="))
+                            {
+                                cellValue = System.Text.RegularExpressions.Regex.Replace (
+                                    cellValue,
+                                    @"\$A" + newTabRowNum,
+                                    "$A" + insertRow
+                                );
+                            }
+                            adjustedRow.Add (cellValue);
+                        }
+
+                        // Insert a new row
+                        var insertRequests = new List<Request>
+                    {
+                        new Request
+                        {
+                            InsertRange = new InsertRangeRequest
+                            {
+                                Range = new GridRange
+                                {
+                                    SheetId = GetSheetId(service, spreadsheetId, yearTab),
+                                    StartRowIndex = insertRow - 1,
+                                    EndRowIndex = insertRow,
+                                    StartColumnIndex = 0,
+                                    EndColumnIndex = 67 // Up to BO
+                                },
+                                ShiftDimension = "ROWS"
+                            }
+                        }
+                    };
+                        var insertBatchUpdate = new BatchUpdateSpreadsheetRequest { Requests = insertRequests };
+                        service.Spreadsheets.BatchUpdate (insertBatchUpdate, spreadsheetId).Execute ();
+
+                        // Update with the adjusted row
+                        string updateRange = $"{yearTab}!A{insertRow}:BO{insertRow}";
+                        var valueRange = new ValueRange
+                        {
+                            Values = new List<IList<object>> { adjustedRow }
+                        };
+                        var update = service.Spreadsheets.Values.Update (valueRange, spreadsheetId, updateRange);
+                        update.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
+                        update.Execute ();
+
+                        // Set font size to 8pt for the new row in "2025" tab
+                        var formatRequests = new List<Request>
+                    {
+                        new Request
+                        {
+                            RepeatCell = new RepeatCellRequest
+                            {
+                                Range = new GridRange
+                                {
+                                    SheetId = GetSheetId(service, spreadsheetId, yearTab),
+                                    StartRowIndex = insertRow - 1,
+                                    EndRowIndex = insertRow,
+                                    StartColumnIndex = 0,
+                                    EndColumnIndex = 67 // A to BO
+                                },
+                                Cell = new CellData
+                                {
+                                    UserEnteredFormat = new CellFormat
+                                    {
+                                        TextFormat = new TextFormat { FontSize = 8 }
+                                    }
+                                },
+                                Fields = "userEnteredFormat.textFormat.fontSize"
+                            }
+                        }
+                    };
+                        var formatBatchUpdate = new BatchUpdateSpreadsheetRequest { Requests = formatRequests };
+                        service.Spreadsheets.BatchUpdate (formatBatchUpdate, spreadsheetId).Execute ();
+
+                        Console.WriteLine ($"Inserted {newCallsign} into {yearTab} tab at row {insertRow} for week {weekNumber} with adjusted formulas and 8pt font");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine ("Failed to retrieve new row from 'New' tab for insertion.");
+                }
+            }
+            else
+            {
+                Console.WriteLine ("No new check-ins provided; skipped yearly tab insertion.");
+            }
         }
         catch (Exception ex)
         {
@@ -2825,234 +2976,98 @@ class Winlink_Checkins
         }
     }
 
-    // Helper method to convert week number to column letter, starting at L for week 1
-    private static string GetColumnLetter (int weekNumber)
-    {
-        int adjustedColumnNumber = weekNumber + 14; // Offset by 14 to start at O (15th column)
-        string columnLetter = "";
-        while (adjustedColumnNumber > 0)
-        {
-            int remainder = (adjustedColumnNumber - 1) % 26;
-            columnLetter = (char)('A' + remainder) + columnLetter;
-            adjustedColumnNumber = (adjustedColumnNumber - 1) / 26;
-        }
-        return columnLetter;
-    }
-    //// Helper method to convert week number to column letter, starting at L for week 1
-    //private static string GetColumnLetter (int weekNumber)
-    //{
-    //    int adjustedColumnNumber = weekNumber + 11; // Offset by 11 to start at L (12th column)
-    //    string columnLetter = "";
-    //    while (adjustedColumnNumber > 0)
-    //    {
-    //        int remainder = (adjustedColumnNumber - 1) % 26;
-    //        columnLetter = (char)('A' + remainder) + columnLetter;
-    //        adjustedColumnNumber = (adjustedColumnNumber - 1) / 26;
-    //    }
-    //    return columnLetter;
-    //}
-
-    // Method to append newCheckIns to the "New" tab, handling multiple rows with tab-delimited columns
-    // and copy all new, entire rows to current year tab, handling formulas so they don't get "texted"
-    // Method to append newCheckIns to "New" tab and copy entire rows to current year tab, handling formulas
-    // Method to append newCheckIns to "New" tab and copy entire rows to current year tab, fixing formula quoting
-    // Method to append newCheckIns to "New" tab and copy entire rows to current year tab, fixing formula quoting
-    // To insert rows into the correct sorted position in the 2025 tab (sorted lexicographically by column A from row 6 downward), we'll need to modify the approach. Instead of appending to the bottom and copying, we'll:
-    // Append new rows to the "New" tab as before.
-
-    // For the year tab (2025), fetch the existing data, determine the insertion point for each new row based on column A, and use the Google Sheets API to insert rows at specific positions.
-
-    // Here's the updated method:
-    // csharp
-
-    private static void AppendToNewTab (string newCheckIns, string spreadsheetId)
+    private static string AppendToNewTab (string newCheckIns, string spreadsheetId, SheetsService service)
     {
         try
         {
-            string credentialsPath = Path.Combine (Directory.GetCurrentDirectory (), "credentials.json");
-            if (!File.Exists (credentialsPath))
+            Console.WriteLine ($"Appending to 'New' tab: '{newCheckIns}'");
+            var fields = newCheckIns.Split ('\t');
+            if (fields.Length > 10) // Trim Grid (11th field)
             {
-                Console.WriteLine ("Google Sheets credentials file (credentials.json) not found. Skipping 'New' tab update.");
-                return;
+                fields [10] = fields [10].Trim ();
             }
+            Console.WriteLine ($"Split into {fields.Length} fields: {string.Join (", ", fields)}");
 
-            GoogleCredential credential;
-            using (var stream = new FileStream (credentialsPath, FileMode.Open, FileAccess.Read))
+            var valueRange = new ValueRange
             {
-                credential = GoogleCredential.FromStream (stream)
-                    .CreateScoped (SheetsService.Scope.Spreadsheets);
-            }
+                Values = new List<IList<object>> { fields.Select (x => (object)x).ToList () }
+            };
+            string range = "New!A:A";
+            var appendRequest = service.Spreadsheets.Values.Append (valueRange, spreadsheetId, range);
+            appendRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum.USERENTERED;
+            var response = appendRequest.Execute ();
 
-            var service = new SheetsService (new BaseClientService.Initializer ()
+            // Set font size to 8pt for the appended row in "New" tab
+            string [] rangeParts = response.Updates.UpdatedRange.Split ('!');
+            int appendedRowNum = int.Parse (rangeParts [1].Split (':') [0].Substring (1));
+            var formatRequests = new List<Request>
+        {
+            new Request
             {
-                HttpClientInitializer = credential,
-                ApplicationName = "Winlink Checkins",
-            });
-
-            const string tabName = "New";
-            string yearTab = DateTime.Today.Year.ToString (); // e.g., "2025"
-
-            // Check if "New" and year tabs exist, create them if not
-            var sheetRequest = service.Spreadsheets.Get (spreadsheetId);
-            var sheetResponse = sheetRequest.Execute ();
-            bool newTabExists = sheetResponse.Sheets.Any (s => s.Properties.Title == tabName);
-            bool yearTabExists = sheetResponse.Sheets.Any (s => s.Properties.Title == yearTab);
-
-            if (!newTabExists)
-            {
-                var addSheetRequest = new Request { AddSheet = new AddSheetRequest { Properties = new SheetProperties { Title = tabName } } };
-                var batchUpdate = new BatchUpdateSpreadsheetRequest { Requests = new List<Request> { addSheetRequest } };
-                service.Spreadsheets.BatchUpdate (batchUpdate, spreadsheetId).Execute ();
-                Console.WriteLine ($"Created new tab: {tabName}");
-            }
-
-            if (!yearTabExists)
-            {
-                var addSheetRequest = new Request { AddSheet = new AddSheetRequest { Properties = new SheetProperties { Title = yearTab } } };
-                var batchUpdate = new BatchUpdateSpreadsheetRequest { Requests = new List<Request> { addSheetRequest } };
-                service.Spreadsheets.BatchUpdate (batchUpdate, spreadsheetId).Execute ();
-                Console.WriteLine ($"Created new tab: {yearTab}");
-            }
-
-            int newSheetId = sheetResponse.Sheets.First (s => s.Properties.Title == tabName).Properties.SheetId.Value;
-            int yearSheetId = sheetResponse.Sheets.First (s => s.Properties.Title == yearTab).Properties.SheetId.Value;
-
-            // Append to "New" tab
-            string newRange = $"{tabName}!A:A";
-            var newValueRequest = service.Spreadsheets.Values.Get (spreadsheetId, newRange);
-            var newValueResponse = newValueRequest.Execute ();
-            int newStartRow = newValueResponse.Values?.Count + 1 ?? 1;
-
-            Console.WriteLine ($"Raw newCheckIns: '{newCheckIns}'");
-            string [] rows = newCheckIns.Split (new [] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
-            var newValues = new List<IList<object>> ();
-            foreach (string row in rows)
-            {
-                string [] columns = row.Split ('\t');
-                var rowValues = new List<object> ();
-                for (int i = 0; i < columns.Length; i++)
+                RepeatCell = new RepeatCellRequest
                 {
-                    string column = columns [i];
-                    if (column.StartsWith ("=")) rowValues.Add (column);
-                    else if (i == 1 || i == 2)
+                    Range = new GridRange
                     {
-                        if (double.TryParse (column, NumberStyles.Any, CultureInfo.InvariantCulture, out double number))
-                            rowValues.Add (number);
-                        else
-                            rowValues.Add (column);
-                    }
-                    else
-                        rowValues.Add (column);
-                }
-                newValues.Add (rowValues);
-            }
-
-            string newUpdateRange = $"{tabName}!A{newStartRow}";
-            var valueRange = new ValueRange { Values = newValues };
-            var updateRequest = service.Spreadsheets.Values.Update (valueRange, spreadsheetId, newUpdateRange);
-            updateRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
-            updateRequest.Execute ();
-            Console.WriteLine ($"Appended {rows.Length} rows to {tabName}!A{newStartRow}");
-
-            // Get year tab data (from row 6 down, assuming headers in 1-5)
-            string yearRange = $"{yearTab}!A6:Z"; // Adjust Z to your last column
-            var yearValueRequest = service.Spreadsheets.Values.Get (spreadsheetId, yearRange);
-            var yearValueResponse = yearValueRequest.Execute ();
-            var yearValues = yearValueResponse.Values ?? new List<IList<object>> ();
-
-            // Process each new row for insertion
-            // Process each new row for insertion
-            var requests = new List<Request> ();
-            foreach (var newRow in newValues)
-            {
-                string newKey = newRow [0].ToString (); // Column A value
-                int insertIndex = 6; // Default to row 6 (0-based + 6 = row 6)
-
-                // Find insertion point (lexicographical order)
-                for (int i = 0; i < yearValues.Count; i++)
-                {
-                    string existingKey = yearValues [i] [0]?.ToString () ?? "";
-                    if (string.Compare (newKey, existingKey, StringComparison.Ordinal) < 0)
+                        SheetId = GetSheetId(service, spreadsheetId, "New"),
+                        StartRowIndex = appendedRowNum - 1,
+                        EndRowIndex = appendedRowNum,
+                        StartColumnIndex = 0,
+                        EndColumnIndex = 67 // A to BO
+                    },
+                    Cell = new CellData
                     {
-                        insertIndex = 6 + i;
-                        break;
-                    }
-                    if (i == yearValues.Count - 1) insertIndex = 6 + yearValues.Count; // End of list
-                }
-
-                // Insert row at position
-                requests.Add (new Request
-                {
-                    InsertRange = new InsertRangeRequest
-                    {
-                        Range = new GridRange
+                        UserEnteredFormat = new CellFormat
                         {
-                            SheetId = yearSheetId,
-                            StartRowIndex = insertIndex - 1,
-                            EndRowIndex = insertIndex - 1,
-                            StartColumnIndex = 0,
-                            EndColumnIndex = 0
-                        },
-                        ShiftDimension = "ROWS"
-                    }
-                });
-
-                // Update the new row with data, preserving formulas
-                var cellData = newRow.Select (v =>
-                {
-                    string value = v.ToString ();
-                    var cell = new CellData ();
-                    if (value.StartsWith ("="))
-                    {
-                        // Treat as formula
-                        cell.UserEnteredValue = new ExtendedValue { FormulaValue = value };
-                    }
-                    else
-                    {
-                        // Treat as string or number
-                        if (double.TryParse (value, NumberStyles.Any, CultureInfo.InvariantCulture, out double number))
-                        {
-                            cell.UserEnteredValue = new ExtendedValue { NumberValue = number };
+                            TextFormat = new TextFormat { FontSize = 8 }
                         }
-                        else
-                        {
-                            cell.UserEnteredValue = new ExtendedValue { StringValue = value };
-                        }
-                    }
-                    return cell;
-                }).ToList ();
-
-                requests.Add (new Request
-                {
-                    UpdateCells = new UpdateCellsRequest
-                    {
-                        Start = new GridCoordinate
-                        {
-                            SheetId = yearSheetId,
-                            RowIndex = insertIndex - 1,
-                            ColumnIndex = 0
-                        },
-                        Rows = new List<RowData> { new RowData { Values = cellData } },
-                        Fields = "userEnteredValue"
-                    }
-                });
-
-                // Update local list for next insertion
-                yearValues.Insert (insertIndex - 6, newRow);
+                    },
+                    Fields = "userEnteredFormat.textFormat.fontSize"
+                }
             }
+        };
+            var formatBatchUpdate = new BatchUpdateSpreadsheetRequest { Requests = formatRequests };
+            service.Spreadsheets.BatchUpdate (formatBatchUpdate, spreadsheetId).Execute ();
 
-            // Execute all requests in a batch
-            if (requests.Any ())
-            {
-                var batchUpdateRequest = new BatchUpdateSpreadsheetRequest { Requests = requests };
-                service.Spreadsheets.BatchUpdate (batchUpdateRequest, spreadsheetId).Execute ();
-                Console.WriteLine ($"Inserted {rows.Length} rows into {yearTab} in sorted order.");
-            }
+            Console.WriteLine ($"Appended new check-in to 'New' tab at {response.Updates.UpdatedRange} with 8pt font");
+            return response.Updates.UpdatedRange;
         }
         catch (Exception ex)
         {
-            Console.WriteLine ($"Error updating tabs: {ex.Message}");
+            Console.WriteLine ($"Error appending to 'New' tab: {ex.Message}");
+            return null;
         }
+    }
+
+    private static string GetColumnLetter (int weekNumber)
+    {
+        int columnNumber = weekNumber + 14; // Week 1 = O (15th), Week 53 = BO (67th)
+        if (columnNumber <= 0) return "A";
+        string columnLetter = "";
+        do
+        {
+            columnLetter = (char)('A' + (columnNumber - 1) % 26) + columnLetter;
+            columnNumber = (columnNumber - 1) / 26;
+        } while (columnNumber > 0);
+        return columnLetter;
+    }
+
+    private static int GetSheetId (SheetsService service, string spreadsheetId, string sheetName)
+    {
+        var spreadsheet = service.Spreadsheets.Get (spreadsheetId).Execute ();
+        var sheet = spreadsheet.Sheets.FirstOrDefault (s => s.Properties.Title == sheetName);
+        if (sheet == null)
+        {
+            var addSheetRequest = new BatchUpdateSpreadsheetRequest
+            {
+                Requests = new List<Request>
+            {
+                new Request { AddSheet = new AddSheetRequest { Properties = new SheetProperties { Title = sheetName } } }
+            }
+            };
+            var response = service.Spreadsheets.BatchUpdate (addSheetRequest, spreadsheetId).Execute ();
+            return response.Replies [0].AddSheet.Properties.SheetId.Value;
+        }
+        return sheet.Properties.SheetId.Value;
     }
 }
 
