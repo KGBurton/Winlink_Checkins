@@ -1332,6 +1332,8 @@ class Winlink_Checkins
                                         isPerfect = false;
                                         score--;
                                         pointsOff += "\tminus 1 point, missing or invalid band in field 7 - " + checkinItems [6].Trim () + "\r\n";
+                                        if (msgField.IndexOf ("AREDN") > -1) pointsOff += "\tAREDN is a project, not a valid band. Try \"5CM, 9CM, 13CM, 33CM, or SHF\"\\r\\n\"\r\n";
+
                                     }
                                     else { checkinItems [6] = bandStr; } // update the item if it was adjusted in the method for minor formatting issues
                                 }
@@ -1348,6 +1350,7 @@ class Winlink_Checkins
                                         if (checkinItems [7].Contains ("PACKET")) tempStr = ", try just \"PACKET\"";
                                         if (bandStr == "TELNET") tempStr = ", try SMTP";
                                         pointsOff += "\tminus 1 point, missing or invalid mode in field 8 - " + checkinItems [7].Trim () + tempStr + "\r\n";
+                                        if (msgField.IndexOf ("AREDN") > -1) pointsOff += "\tAREDN is a project, not a valid mode. Try \"MESH\"\r\n";
                                     }
                                 }
                                 //    i++;
@@ -1821,7 +1824,7 @@ class Winlink_Checkins
                                         if (msgFieldNumbered == "")
                                         {
                                             msgFieldNumbered = "Checkin data was not found";
-                                            if (fileText.IndexOf ("##") > -1) msgFieldNumbered += " - probably because the checkin data did not start with ##.";
+                                            if (newFormat) msgFieldNumbered += " - probably because the checkin data did not start with ##.";
                                             else msgFieldNumbered += " - probably because you didn't use the ## marker at the ##beginning and end## of your checkin data or it was in the wrong place.";
                                         }
                                         reminderTxt += "\r\n" + "\r\nThis is a copy of your message and extracted data. \r\nMessage: " + msgField + "\r\n\r\nYour score is: " + score + "\r\n" + pointsOff +
