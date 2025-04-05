@@ -630,7 +630,7 @@ class Winlink_Checkins
                     if (removal > 0)
                     {
 
-                        removalString.AppendLine (checkIn + " in " + messageID + " was a removal request.");
+                        removalString.AppendLine (fromTxt + " in " + messageID + " was a removal request.");
                         removalCt++;
                         junk = 0;  // debug Console.Write("Removal Request: "+file+", skipping.");
                     }
@@ -644,7 +644,7 @@ class Winlink_Checkins
                         // Console.Write (messageID + " Acknowledgement discarded\r\n");
                         oldSkipped = skipped;
                         junk = 0; //debug Console.Write(file+" is an acknowedgement, skipping.");
-                        skippedString.Append ("\tAcknowledgement discarded: " + messageID + "\r\n");
+                        skippedString.Append ("\tAcknowledgement from " + fromTxt + " discarded. Message ID: " + messageID + "\r\n");
                     }
                     else if (startDateCompare < 0 || endDateCompare > 0)
                     {
@@ -709,6 +709,7 @@ class Winlink_Checkins
                                 startPosition += 2;
                                 endPosition = fileText.IndexOf ("##", startPosition);
                                 if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                if (endPosition <= startPosition) startPosition = fileText.IndexOf ("|", endHeader);
                                 // new format found
                                 newFormat = true;
                             }
@@ -1036,7 +1037,7 @@ class Winlink_Checkins
                                     else if (tempCheckIn == "")
                                     {
                                         callSignTypo = checkIn;
-                                        Console.WriteLine ("1044 checkIn is null or invalid in :" + messageID);
+                                        Console.WriteLine ("1044 checkIn "+ checkIn + " is null or invalid in :" + messageID);
                                         checkIn = fromTxt;
                                     }
                                 }
@@ -1090,6 +1091,7 @@ class Winlink_Checkins
                                 {
                                     score = score - (8 - len);
                                     pointsOff += "\tminus " + (8 - len) + " point(s), for missing delimiter(s)/fields - see examples below.\r\n";
+                                    if ((msgField.IndexOf ("|") > -1) && (msgField.IndexOf (",") > -1)) pointsOff += "\tYou may have mixed the '|' and ',' delimiters in the check in data.";
                                     isPerfect = false;
                                 }
 
@@ -1332,7 +1334,7 @@ class Winlink_Checkins
                                         isPerfect = false;
                                         score--;
                                         pointsOff += "\tminus 1 point, missing or invalid band in field 7 - " + checkinItems [6].Trim () + "\r\n";
-                                        if (msgField.IndexOf ("AREDN") > -1) pointsOff += "\tAREDN is a project, not a valid band. Try \"5CM, 9CM, 13CM, 33CM, or SHF\"\\r\\n\"\r\n";
+                                        if (msgField.IndexOf ("AREDN") > -1) pointsOff += "\tAREDN is a project, not a valid band. Try \"5CM, 9CM, 13CM, 33CM, or SHF.\"\r\n";
 
                                     }
                                     else { checkinItems [6] = bandStr; } // update the item if it was adjusted in the method for minor formatting issues
@@ -1550,49 +1552,61 @@ class Winlink_Checkins
                                 msgFieldNumbered = fillFieldNum (msgField);
                                 csvString.Append (checkIn + ":" + messageID + "," + latitude + "," + longitude + "," + locType + "," + msgField + "\r\n");
 
-                                // find the band if it's where it's supposed to be
-                                bandStr = "";
-                                modeStr = "";
+                                //// find the band if it's where it's supposed to be
+                                //bandStr = "";
+                                //modeStr = "";
 
-                                // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
-                                startPosition = IndexOfNthSB (msgField, (char)44, 0, 6) + 1;
-                                if (startPosition > -1) { endPosition = IndexOfNthSB (msgField, (char)44, 0, 7); len = endPosition - startPosition; }
-                                if (len > 0 && msgField.Length >= len)
-                                {
-                                    bandStr = msgField.Substring (startPosition, len);
-                                }
-                                // winlink checkin has fields for band and mode so look there if not in the message
-                                if (bandStr == "" && winlinkCkin > 0)
-                                {
-                                    startPosition = fileText.IndexOf ("BAND:");
-                                    if (startPosition == -1)
-                                    {
-                                        // try another label that I have seen instead
-                                        startPosition = fileText.IndexOf ("BAND USED:");
-                                        if (startPosition > -1) { startPosition += 11; }
-                                    }
-                                    else { startPosition = startPosition + 6; }
+                                //// debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
+                                //// finding the band based on the 6th and 7th occurrences of the delimiter 
+                                //// this is archaic and should be superceded by the split stuff below
+                                //startPosition = IndexOfNthSB (msgField, (char)44, 0, 6) + 1; // check 
+                                //if (startPosition > 0)
+                                //{
+                                //    endPosition = IndexOfNthSB (msgField, (char)44, 0, 7); len = endPosition - startPosition;
+                                //}
+                                //else // check for "|" instead
+                                //{
+                                //    startPosition = IndexOfNthSB (msgField, (char)124, 0, 6) + 1;
+                                //    if (startPosition > -1) { endPosition = IndexOfNthSB (msgField, (char)124, 0, 7); len = endPosition - startPosition; }
 
-                                    if (startPosition > -1)
-                                    {
-                                        endPosition = fileText.IndexOf ("\r\n", startPosition);
-                                        len = endPosition - startPosition;
-                                        if (len > 0) { bandStr = fileText.Substring (startPosition, len); }
-                                    }
-                                }
-                                if (bandStr == "")
-                                {
-                                    if (msgField.IndexOf ("VARA FM") > -1)
-                                    {
-                                        modeStr = "VARA FM";
-                                        // bandStr = "VARA FM";
-                                    }
-                                    if (msgField.IndexOf ("VARA HF") > -1)
-                                    {
-                                        modeStr = "VARA HF";
-                                        // bandStr = "VARA HF";
-                                    }
-                                }
+                                //}
+
+                                //if (len > 0 && msgField.Length >= len)
+                                //{
+                                //    bandStr = msgField.Substring (startPosition, len);
+                                //}
+                                //// winlink checkin has fields for band and mode so look there if not in the message
+                                //if (bandStr == "" && winlinkCkin > 0)
+                                //{
+                                //    startPosition = fileText.IndexOf ("BAND:");
+                                //    if (startPosition == -1)
+                                //    {
+                                //        // try another label that I have seen instead
+                                //        startPosition = fileText.IndexOf ("BAND USED:");
+                                //        if (startPosition > -1) { startPosition += 11; }
+                                //    }
+                                //    else { startPosition = startPosition + 6; }
+
+                                //    if (startPosition > -1)
+                                //    {
+                                //        endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                //        len = endPosition - startPosition;
+                                //        if (len > 0) { bandStr = fileText.Substring (startPosition, len); }
+                                //    }
+                                //}
+                                //if (bandStr == "")
+                                //{
+                                //    if (msgField.IndexOf ("VARA FM") > -1)
+                                //    {
+                                //        modeStr = "VARA FM";
+                                //        // bandStr = "VARA FM";
+                                //    }
+                                //    if (msgField.IndexOf ("VARA HF") > -1)
+                                //    {
+                                //        modeStr = "VARA HF";
+                                //        // bandStr = "VARA HF";
+                                //    }
+                                //}
                                 bandStr = bandStr
                                     .ToUpper ()
                                     .Replace ("5.8GHZ", "5CM")
@@ -1671,44 +1685,44 @@ class Winlink_Checkins
                                 }
                                 else { bandCt++; }
 
-                                if (modeStr == "")
-                                {
-                                    // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
-                                    startPosition = IndexOfNthSB (msgField, (char)44, 0, 7);
-                                    // if (startPosition > -1) { startPosition += 1; }
-                                    if (startPosition > -1)
-                                    {
-                                        endPosition = IndexOfNthSB (msgField, (char)44, 0, 8);
-                                        startPosition += 1;
-                                        len = endPosition - startPosition;
-                                        if (len > 0 && msgField.Length >= len)
-                                        {
-                                            modeStr = msgField.Substring (startPosition, len);
+                                //if (modeStr == "")
+                                //{
+                                //    // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
+                                //    startPosition = IndexOfNthSB (msgField, (char)44, 0, 7);
+                                //    // if (startPosition > -1) { startPosition += 1; }
+                                //    if (startPosition > -1)
+                                //    {
+                                //        endPosition = IndexOfNthSB (msgField, (char)44, 0, 8);
+                                //        startPosition += 1;
+                                //        len = endPosition - startPosition;
+                                //        if (len > 0 && msgField.Length >= len)
+                                //        {
+                                //            modeStr = msgField.Substring (startPosition, len);
 
-                                        }
-                                    }
-                                    if (modeStr == "" && winlinkCkin > 0)
-                                    {
-                                        startPosition = fileText.IndexOf ("SESSION:");
-                                        if (startPosition == -1)
-                                        {
-                                            // try another label that I have seen instead
-                                            startPosition = fileText.IndexOf ("SESSION TYPE:");
-                                            if (startPosition > -1)
-                                            {
-                                                startPosition += 14;
-                                            }
-                                        }
-                                        else { startPosition += 9; }
+                                //        }
+                                //    }
+                                //    if (modeStr == "" && winlinkCkin > 0)
+                                //    {
+                                //        startPosition = fileText.IndexOf ("SESSION:");
+                                //        if (startPosition == -1)
+                                //        {
+                                //            // try another label that I have seen instead
+                                //            startPosition = fileText.IndexOf ("SESSION TYPE:");
+                                //            if (startPosition > -1)
+                                //            {
+                                //                startPosition += 14;
+                                //            }
+                                //        }
+                                //        else { startPosition += 9; }
 
-                                        if (startPosition > -1)
-                                        {
-                                            endPosition = fileText.IndexOf ("\r\n", startPosition);
-                                            len = endPosition - startPosition;
-                                            if (len > 0) { modeStr = fileText.Substring (startPosition, len); }
-                                        }
-                                    }
-                                }
+                                //        if (startPosition > -1)
+                                //        {
+                                //            endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                //            len = endPosition - startPosition;
+                                //            if (len > 0) { modeStr = fileText.Substring (startPosition, len); }
+                                //        }
+                                //    }
+                                //}
 
                                 // if (modeStr.IndexOf (" ") > -1) { modeStr = removeFieldNumber (modeStr); }
                                 modeStr = modeStr
@@ -1803,15 +1817,16 @@ class Winlink_Checkins
                                     reminderTxt += "\r\nCheck for a typo in your callsign in the checkin data: " + callSignTypo + " vs " + checkIn + "\r\n";
                                     typoString.Append ("\t messageID " + messageID + " - " + checkIn + " vs " + callSignTypo + "\r\n\t\t" + msgField + "\r\n");
                                     if (msgField.IndexOf ("##") == -1) reminderTxt += "You may not have used the \"##\" marker at the beginning and end of your checkin data. See the examples.";
+                                    if (isValidCallsign (callSignTypo) == "") reminderTxt += "You may have switched your call sign and name or left the call sign out";
 
                                 }
-                                if (maidenheadGrid == "invalid") reminderTxt += "\r\nCheck for a typo in your Maidenhead Grid (should be either xx##xx or xx##): " + msgField + "\r\n";
+                                if ((maidenheadGrid == "invalid") || (maidenheadGrid == "")) reminderTxt += "\r\nCheck for a typo in your Maidenhead Grid (should be either xx##xx or xx##): " + msgField + "\r\n";
                                 if (noScore == -1)
                                 {
                                     if (isPerfect)
                                     {
                                         // reminderTxt += "\r\nThis is a copy of your message (with numbered fields) and extracted data. \r\nMessage: \r\n" + msgFieldNumbered + "\r\n\r\nPerfect Message! Your score is 10.";
-                                        reminderTxt += "\r\nThis is a copy of your message  and extracted data. \r\nMessage: \r\n" + msgField + "\r\n\r\nPerfect Message! Your score is 10.";
+                                        reminderTxt += "\r\nThis is a copy of your message and extracted data. \r\nMessage: \r\n" + msgField + "\r\n\r\nPerfect Message! Your score is 10.";
                                         perfectScoreCt++;
                                     }
                                     else
@@ -2009,10 +2024,10 @@ class Winlink_Checkins
 
             logWrite.WriteLine ("    Total Stations Checking in: " + (ct - dupCt) + "    Duplicates: " + dupCt + "    Total Checkins: " + ct + "    Removal Requests: " + removalCt);
             logWrite.WriteLine ("Non-" + netName + " checkin messages skipped: " + skipped + " (including " + ackCt + " acknowledgements and " + outOfRangeCt + " out of date range messages skipped.)\r\n");
-            logWrite.WriteLine ("Total messages processed: " + msgTotal + "\r\n");
-            logWrite.WriteLine ("Row " + tempCT + " goes into " + netName + " Spreadsheet at row 1 of the checkin column to be recorded.");
+            logWrite.WriteLine ("Total messages processed: " + msgTotal + " (includes " + removalCt + " removal(s) and " + ackCt + " acknowledgement(s).\r\n");
+            logWrite.WriteLine ("Row " + tempCT + " should now be in " + netName + " Spreadsheet at row 1 of the checkin column to be recorded.");
             tempCT++;
-            logWrite.WriteLine ("Row " + tempCT + " goes into " + netName + " Spreadsheet at row 2 of the checkin column and is the copy" +
+            logWrite.WriteLine ("Row " + tempCT + " should now be in " + netName + " Spreadsheet at row 2 of the checkin column and is the copy" +
                     "\r\n\tlist for the checkin acknowledgement.");
             tempCT = tempCT + 2;
             logWrite.WriteLine ("Rows " + tempCT + " and beyond have the list of duplicates found, bounced messages\r\n" +
@@ -2048,7 +2063,10 @@ class Winlink_Checkins
             string spreadsheetId = "1e0PJVqMGZhTzxwIVDf9if1dSSnG8y1U5Zf6pojB5Txc"; // Your new ID
             if (!string.IsNullOrWhiteSpace (spreadsheetId))
             {
-                UpdateGoogleSheet (netCheckinString, newCheckIns, spreadsheetId, endDate, ct);
+                // Console.WriteLine ("Google Update is turned off");
+                
+                 UpdateGoogleSheet (netCheckinString, newCheckIns, spreadsheetId, endDate, ct); // ++++
+                
                 // The AppendToNewTab call is already handled inside UpdateGoogleSheet, so remove these:
                 // AppendToNewTab(newCheckIns.ToString(), spreadsheetId); // Redundant
                 // AppendToNewTab (newCheckIns.ToString (), spreadsheetId, service);
@@ -2065,7 +2083,7 @@ class Winlink_Checkins
 
             if (duplicates.Length != 0) { logWrite.WriteLine (duplicates + "\r\n"); }
             if (bouncedString.Length != 0) { logWrite.WriteLine ("Messages that bounced: " + bouncedString); }
-            if (newCheckIns.Length != 0) { logWrite.WriteLine ("New Checkins (paste these lines into the New tab of the spreadsheet: \r\n" + newCheckIns); }
+            if (newCheckIns.Length != 0) { logWrite.WriteLine ("New Checkins should have been appended to the New tab and inserted into the yearly tab of the spreadsheet: \r\n" + newCheckIns); }
             if (skippedString.Length != 0) { logWrite.WriteLine ("Messages Skipped: \r\n" + skippedString); }
             if (removalString.Length != 0) { logWrite.WriteLine ("Requests to be Removed: " + removalString); }
             if (localWeatherCt > 0) { logWrite.WriteLine ("Local Weather Checkins: " + localWeatherCt); }
@@ -2092,7 +2110,7 @@ class Winlink_Checkins
             // logWrite.WriteLine ("Winlink Express: " + winlinkCt + "  PAT: " + patCt + "  RadioMail: " + radioMailCt + "  WoAD: " + woadCt + "\r\n");
             logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickMCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct) + "\r\n");
             //var totalValidGPS = mapCt-noGPSCt;
-            logWrite.WriteLine ("Total Checkins with a perfect message: " + perfectScoreCt);
+            logWrite.WriteLine ("Total Checkins with a perfect message: (Not including "+noScoreCt+ " NoScore's) " + perfectScoreCt);
             logWrite.WriteLine ("Total Checkins using the new format: " + newFormatCt);
             logWrite.WriteLine ("Total Checkins with a geolocation: " + (mapCt - noGPSCt));
             // logWrite.WriteLine ("Total Checkins with a geolocation: " + (mapCt - noGPSCt));
@@ -2526,6 +2544,10 @@ class Winlink_Checkins
             case "VARA FM":
             case "VARA HF":
             case "PACTOR":
+            case "PACTOR P1":
+            case "PACTOR P2":
+            case "PACTOR P3":
+            case "PACTOR P4":
             case "INDIUM GO":
             case "MESH":
             case "APRS":
