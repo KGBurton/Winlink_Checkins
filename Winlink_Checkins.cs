@@ -51,24 +51,54 @@ class Winlink_Checkins
         //DateTime date;
         bool isValid = false;
         string input;
+        string weekDay = "";
+        int netLength = 0;
+        // DateTime endDate = default;
 
-        // Console.WriteLine ("Enter the start date - must be within three weeks of today (yyyymmdd): ");
-        startDate = GetValidDate (21);
-        //startDate = startDate.ToUniversalTime();
 
+        Console.WriteLine ("How many days does the net last? (max of 7)");
         while (!isValid)
         {
-            endDate = GetValidDate (0);
-            int startDateCompare = DateTime.Compare (startDate, endDate);
-            if (startDateCompare >= 0)
+            netLength = int.Parse (Console.ReadLine ());
+            if (netLength > 0 && netLength <= 7) isValid = true;
+        }
+        isValid = false;
+        while (!isValid)
+        {
+            (startDate, endDate, weekDay) = getNetDates (startDate, endDate, weekDay, netLength); // Assuming netLength isn't needed yet
+            Console.WriteLine ($"Your net begins on {weekDay}, {startDate} and ends on {endDate}. \r\nIs that correct? (N or any other character to continue)");
+            ConsoleKeyInfo keyPress = Console.ReadKey (true); // 'true' prevents displaying the pressed key
+            char yesNo = keyPress.KeyChar;
+            Console.WriteLine (); // Add newline after keypress for better formatting
+            if (char.ToUpper (yesNo) != 'N')
             {
-                Console.WriteLine ("The start date must be earlier than the end date. Please try again.");
+                isValid = true;
             }
             else
-            { isValid = true; }
-
+            {
+                Console.WriteLine ("Please enter the dates again.");
+            }
         }
-        endDate = endDate.AddDays (1);
+        isValid = false;
+        startDate = startDate.AddDays (-1);// the -1 will catch those that checked in a bit early
+        endDate = endDate.AddDays (1); // the +1 will catch those that checked in a bit late
+        // weekDay is the day the net started
+
+        //startDate = startDate.ToUniversalTime();
+
+        //while (!isValid)
+        //{
+        //    endDate = getNetDates (21);
+        //    int startDateCompare = DateTime.Compare (startDate, endDate);
+        //    if (startDateCompare >= 0)
+        //    {
+        //        Console.WriteLine ("The start date must be earlier than the end date. Please try again.");
+        //    }
+        //    else
+        //    { isValid = true; }
+
+        //}
+        // endDate = endDate.AddDays (1);
 
         // Get the unique net identifier to screen only relevant messages from the folder
         // Console.WriteLine("Enter the unique net name for which the checkins are sent:");
@@ -1037,7 +1067,7 @@ class Winlink_Checkins
                                     else if (tempCheckIn == "")
                                     {
                                         callSignTypo = checkIn;
-                                        Console.WriteLine ("1044 checkIn "+ checkIn + " is null or invalid in :" + messageID);
+                                        Console.WriteLine ("1044 checkIn " + checkIn + " is null or invalid in :" + messageID);
                                         checkIn = fromTxt;
                                     }
                                 }
@@ -1098,7 +1128,7 @@ class Winlink_Checkins
                                 if (checkinItems.Length > 2)
                                 {
                                     // array is zero based
-                                    checkinName = isValidName (checkinItems [1]).Trim ();
+                                    checkinName = isValidName (checkinItems [1]).Trim ().Trim (',');
                                     if (checkinName == "")
                                     {
                                         isPerfect = false;
@@ -1110,7 +1140,7 @@ class Winlink_Checkins
                                 if (checkinItems.Length >= 6)
                                 {
                                     string countries = "COL,AFG,ALA,ALB,DZA,ASM,AND,AGO,AIA,ATA,ATG,ARG,ARM,ABW,AUS,AUT,AZE,BHS,BHR,BGD,BRB,BLR,BEL,BLZ,BEN,BMU,BTN,BOL,BIH,BWA,BVT,BRA,IOT,VGB,BRN,BGR,BFA,BDI,KHM,CMR,CAN,CPV,BES,CYM,CAF,TCD,CHL,CHN,CXR,CCK,COL,COM,COK,CRI,HRV,CUB,CUW,CYP,CZE,COD,DNK,DJI,DMA,DOM,TLS,ECU,EGY,SLV,GNQ,ERI,EST,SWZ,ETH,FLK,FRO,FSM,FJI,FIN,FRA,GUF,PYF,ATF,GAB,GMB,GEO,DEU,GHA,GIB,GRC,GRL,GRD,GLP,GUM,GTM,GGY,GIN,GNB,GUY,HTI,HMD,HND,HKG,HUN,ISL,IND,IDN,IRN,IRQ,IRL,IMN,ISR,ITA,CIV,JAM,JPN,JEY,JOR,KAZ,KEN,KIR,XXK,KWT,KGZ,LAO,LVA,LBN,LSO,LBR,LBY,LIE,LTU,LUX,MAC,MDG,MWI,MYS,MDV,MLI,MLT,MHL,MTQ,MRT,MUS,MYT,MEX,MDA,MNG,MNE,MSR,MAR,MOZ,MMR,NAM,NRU,NPL,NLD,NCL,NZL,NIC,NER,NGA,NIU,NFK,PRK,MKD,MNP,NOR,OMN,PAK,PLW,PSE,PAN,PNG,PRY,PER,PHL,PCN,POL,PRT,MCO,PRI,QAT,COG,REU,ROU,RUS,RWA,BLM,SHN,KNA,LCA,MAF,SPM,VCT,WSM,SMR,STP,SAU,SEN,SRB,SYC,SLE,SGP,SXM,SVK,SVN,SLB,SOM,ZAF,SGS,KOR,SSD,ESP,LKA,SDN,SUR,SJM,SWE,CHE,SYR,TWN,TJK,TZA,THA,TGO,TKL,TON,TTO,TUN,TUR,TKM,TCA,TUV,UGA,UKR,ARE,GBR,UMI,USA,URY,UZB,VUT,VAT,VEN,VNM,VIR,WLF,ESH,YEM,ZMB,ZWE,";
-                                    checkinCountry = isValidField (checkinItems [5].Trim (), countries);
+                                    checkinCountry = isValidField (checkinItems [5].Trim ().Trim (','), countries);
                                     countries = "COLOMBIA,BELGIUM,PHILIPPINES,TRINIDAD,GERMANY,ENGLAND,NORWAY,NEW ZEALAND,ST LUCIA,VENEZUELA,AUSTRIA,ROMANIA,CANADA,SERBIA";
                                     checkinCountryLong = isValidField (checkinItems [5].Trim (), countries);
                                     if (checkinCountry == "")
@@ -1122,7 +1152,7 @@ class Winlink_Checkins
                                 }
                                 if (checkinItems.Length >= 5)
                                 {
-                                    checkinState = checkinItems [4].Replace (".", "").Trim ();
+                                    checkinState = checkinItems [4].Replace (".", "").Trim ().Trim (',');
                                     int scoreState = 0;
                                     string tempStr = "";
                                     string tempStr2 = "";
@@ -1303,7 +1333,7 @@ class Winlink_Checkins
 
                                     if (checkinItems.Length > 4 && checkinCountry == "USA") // check only for USA
                                     {
-                                        checkinCounty = isValidName (checkinItems [3].Replace (" COUNTY", "").Replace ("CO", "").Trim ().Trim ('.'));
+                                        checkinCounty = isValidName (checkinItems [3].Replace (" COUNTY", "").Replace ("CO", "").Trim ().Trim ('.').Trim (','));
                                         if (checkinCounty == "")
                                         {
                                             isPerfect = false;
@@ -1315,7 +1345,7 @@ class Winlink_Checkins
 
                                     if (checkinItems.Length > 3)
                                     {
-                                        checkinCity = isValidName (checkinItems [2].Trim ());
+                                        checkinCity = isValidName (checkinItems [2].Trim ().Trim (','));
                                         if (checkinCity == "")
                                         {
                                             isPerfect = false;
@@ -1820,7 +1850,7 @@ class Winlink_Checkins
                                     if (isValidCallsign (callSignTypo) == "") reminderTxt += "You may have switched your call sign and name or left the call sign out";
 
                                 }
-                                if ((maidenheadGrid == "invalid") || (maidenheadGrid == "")) reminderTxt += "\r\nCheck for a typo in your Maidenhead Grid (should be either xx##xx or xx##): " + msgField + "\r\n";
+                                if ((maidenheadGrid == "invalid") || (maidenheadGrid == "" && checkinItems.Length > 8)) reminderTxt += "\r\nCheck for a typo in your Maidenhead Grid (should be either xx##xx or xx##): " + msgField + "\r\n";
                                 if (noScore == -1)
                                 {
                                     if (isPerfect)
@@ -2064,12 +2094,10 @@ class Winlink_Checkins
             if (!string.IsNullOrWhiteSpace (spreadsheetId))
             {
                 // Console.WriteLine ("Google Update is turned off");
-                
-                 UpdateGoogleSheet (netCheckinString, newCheckIns, spreadsheetId, endDate, ct); // ++++
-                
-                // The AppendToNewTab call is already handled inside UpdateGoogleSheet, so remove these:
-                // AppendToNewTab(newCheckIns.ToString(), spreadsheetId); // Redundant
-                // AppendToNewTab (newCheckIns.ToString (), spreadsheetId, service);
+
+                UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, spreadsheetId, endDate, ct); // ++++
+
+
             }
 
             xmlPerfDoc.Save (xmlPerfFile);
@@ -2110,7 +2138,7 @@ class Winlink_Checkins
             // logWrite.WriteLine ("Winlink Express: " + winlinkCt + "  PAT: " + patCt + "  RadioMail: " + radioMailCt + "  WoAD: " + woadCt + "\r\n");
             logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickMCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct) + "\r\n");
             //var totalValidGPS = mapCt-noGPSCt;
-            logWrite.WriteLine ("Total Checkins with a perfect message: (Not including "+noScoreCt+ " NoScore's) " + perfectScoreCt);
+            logWrite.WriteLine ("Total Checkins with a perfect message: (Not including " + noScoreCt + " NoScore's) " + perfectScoreCt);
             logWrite.WriteLine ("Total Checkins using the new format: " + newFormatCt);
             logWrite.WriteLine ("Total Checkins with a geolocation: " + (mapCt - noGPSCt));
             // logWrite.WriteLine ("Total Checkins with a geolocation: " + (mapCt - noGPSCt));
@@ -2150,66 +2178,44 @@ class Winlink_Checkins
         }
         return -1;
     }
-    static DateTime GetValidDate (int offset)
-    // This method prompts the user for a date in YYYYMMDD format and ensures it’s within three weeks (the +- 21) of today.
+
+    static (DateTime, DateTime, string) getNetDates (DateTime startDate, DateTime endDate, string weekDay, int netLength)
     {
         DateTime date = default;
+        DateTime todayDate = DateTime.Today; // Use DateTime.Today instead of date.Today
+        const int offset = 21;
         bool isValid = false;
-        // Console.WriteLine ("Enter the start date - must be within three weeks of today (yyyymmdd): ");
+
         while (!isValid)
         {
-            if (offset == 0)
-            {
-                Console.WriteLine ("Enter the end date - must be today or earlier and before the next net's Monday (yyyymmdd): ");
-            }
-            else
-            {
-                Console.WriteLine ("Enter the start date - must be within three weeks of today (yyyymmdd): ");
-            }
-
+            Console.WriteLine ("Enter the start date - must be within three weeks of today (yyyymmdd): ");
             string input = Console.ReadLine ();
-            DateTime todayDate = DateTime.Today;
 
             if (DateTime.TryParseExact (input, "yyyyMMdd", null, System.Globalization.DateTimeStyles.None, out date))
             {
-                int dateCompare = DateTime.Compare (date, todayDate.AddDays (-offset));
-                if (dateCompare < 0)
+                // Check if date is within 21 days before and after today
+                if (date < todayDate.AddDays (-offset) || date > todayDate.AddDays (offset))
                 {
-                    Console.WriteLine ("Invalid date: " + date + " Must be within three weeks of today. Please try again.");
+                    Console.WriteLine ($"Invalid date: {date:yyyyMMdd} Must be within three weeks of today. Please try again.");
                     continue;
                 }
-                dateCompare = DateTime.Compare (todayDate.AddDays (offset), date);
-                if (dateCompare < 0)
-                {
-                    Console.WriteLine ("Invalid date: " + input + " must be today or earlier and before the next net's Monday (yyyymmdd). Please try again.");
-                    continue;
-                }
+
+                // If we get here, the date is valid
                 isValid = true;
             }
             else
             {
-                Console.WriteLine ("Invalid date format: " + input + ". Please use YYYYMMDD format and try again.");
+                Console.WriteLine ("Invalid date format. Please use yyyymmdd format.");
             }
         }
-        return date;
+
+        // Set the return values
+        startDate = date;
+        endDate = date.AddDays (netLength); 
+        weekDay = date.DayOfWeek.ToString ();
+
+        return (startDate, endDate, weekDay);
     }
-    //static void SaveDate (DateTime date)
-    //{
-    //    string filePath = "dates.txt";
-    //    try
-    //    {
-    //        using (StreamWriter writer = new StreamWriter (filePath, true))
-    //        {
-    //            writer.WriteLine (date.ToString ("yyyy-MM-dd"));
-    //        }
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Console.WriteLine ($"An error occurred while saving the date: {ex.Message}");
-    //    }
-    //}
-
-
     public static string isValidCallsign (string input)
     // This method validates a callsign using the regex pattern \b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b. 
     {
@@ -2429,6 +2435,8 @@ class Winlink_Checkins
             .Replace (" ", "")
             .Replace ("(", "")
             .Replace (")", "")
+            .Replace ("-", "")
+            .Replace (".", "")
             ;
         switch (input)
         {
@@ -2786,7 +2794,7 @@ class Winlink_Checkins
         return checkinItems;
     }
     // Method to update Google Sheet with check-in data
-    private static void UpdateGoogleSheet (StringBuilder netCheckinString, StringBuilder newCheckins, string spreadsheetId, DateTime endDate, int checkinCount)
+    private static void UpdateGoogleSheet (StringBuilder netCheckinString, StringBuilder netAckString2, StringBuilder newCheckins, string spreadsheetId, DateTime endDate, int checkinCount)
     {
         try
         {
@@ -2844,7 +2852,7 @@ class Winlink_Checkins
             row1Update.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
             row1Update.Execute ();
 
-            string semiDelimited = netCheckinString.ToString ().Replace ('\t', ';');
+            string semiDelimited = netAckString2.ToString ();
             string row2Range = $"{yearTab}!{columnLetter}2";
             var row2ValueRange = new ValueRange
             {
