@@ -104,13 +104,14 @@ class Winlink_Checkins
         // Console.WriteLine("Enter the unique net name for which the checkins are sent:");
         // string netName = Console.ReadLine();
         // Get the native call sign from the user to find the messages folder.
-        Console.WriteLine ("Enter YOUR call sign to find the messages folder. \n     If you leave it blank, the program will assume that it is already in the messages folder.");
+        string currentFolder = "";
+        string applicationFolder = Directory.GetCurrentDirectory ();
+        Console.WriteLine ("Enter YOUR call sign to find the messages folder. \n     If you leave it blank, the program will assume that it is already operating from the messages folder: \n\t"+applicationFolder);
         string yourCallSign = Console.ReadLine ();
 
         // Get the data folder - either the global messages folder (default) or the current
         // operator's messages folder, assuming the default RMS installation location.
-        string currentFolder = "";
-        string applicationFolder = Directory.GetCurrentDirectory ();
+
         string netName = "";
         if (yourCallSign != "")
         {
@@ -660,7 +661,7 @@ class Winlink_Checkins
                     if (removal > 0)
                     {
 
-                        removalString.AppendLine (fromTxt + " in " + messageID + " was a removal request.");
+                        removalString.AppendLine (fromTxt + "\tin " + messageID + " was a removal request.");
                         removalCt++;
                         junk = 0;  // debug Console.Write("Removal Request: "+file+", skipping.");
                     }
@@ -738,6 +739,13 @@ class Winlink_Checkins
                             {
                                 startPosition += 2;
                                 endPosition = fileText.IndexOf ("##", startPosition);
+                                isValid = false;
+                                while (isValid == false)
+                                {
+                                    int anotherEnd = fileText.IndexOf ("##", endPosition + 2);
+                                    if (anotherEnd > -1) endPosition = anotherEnd;
+                                    else isValid = true;
+                                }
                                 if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
                                 if (endPosition <= startPosition) startPosition = fileText.IndexOf ("|", endHeader);
                                 // new format found
@@ -2095,9 +2103,8 @@ class Winlink_Checkins
             {
                 // Console.WriteLine ("Google Update is turned off");
 
-                UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, spreadsheetId, endDate, ct); // ++++
-
-
+                //    UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, spreadsheetId, endDate, ct); // ++++
+                UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, removalString, spreadsheetId, endDate, ct);
             }
 
             xmlPerfDoc.Save (xmlPerfFile);
@@ -2232,7 +2239,7 @@ class Winlink_Checkins
     // This method removes numbers and newlines from a name field:
     {
         string pattern = @".*\d.*(\r?\n)?";
-        input = input.ToUpper ();
+        input = input.ToUpper ().Replace("(","").Replace (")", "");
         string result = Regex.Replace (input, pattern, "", RegexOptions.Multiline);
         // Regex regexName = new Regex (pattern, RegexOptions.IgnoreCase);
         // Match match = regexName.Match (input);
@@ -2263,7 +2270,7 @@ class Winlink_Checkins
     {
         // Define the regular expression for Maidenhead grid locator (4 or 6 character grids)
         Regex regex = new Regex (@"\b([A-R]{2}\d{2}[A-X]{0,2}[a-xA-X]{0,2})\b", RegexOptions.IgnoreCase);
-
+        input = input.Replace ("-", "").Replace(" ","") ;
         // Search for a match in the input string
         Match match = regex.Match (input);
 
@@ -2429,6 +2436,7 @@ class Winlink_Checkins
     {
         input = input
             .Replace ("METERS", "M")
+            .Replace ("MTRS", "M")
             .Replace ("METER", "M")
             .Replace ("TELENET", "TELNET") // common typo
             .Replace ("TELENT", "TELNET")
@@ -2755,6 +2763,7 @@ class Winlink_Checkins
             .Replace (" |", "|")
             .Replace ("| ", "|")
             .Replace ("\"", "")
+            .Replace ("#","") // strip out a single # for those that formatted ## incorrectly
             .Replace ("/", ",") // this was to allow Radiogram forms to use "/" since commas are not permitted
                                 // .Replace ("\r\n", "") // some messages get a line wrap that messes things up
             .Trim ()
@@ -2794,7 +2803,7 @@ class Winlink_Checkins
         return checkinItems;
     }
     // Method to update Google Sheet with check-in data
-    private static void UpdateGoogleSheet (StringBuilder netCheckinString, StringBuilder netAckString2, StringBuilder newCheckins, string spreadsheetId, DateTime endDate, int checkinCount)
+    private static void UpdateGoogleSheet (StringBuilder netCheckinString, StringBuilder netAckString2, StringBuilder newCheckins, StringBuilder removalString, string spreadsheetId, DateTime endDate, int checkinCount)
     {
         try
         {
@@ -2811,12 +2820,10 @@ class Winlink_Checkins
                 ApplicationName = "Winlink Checkins"
             });
 
-            // Define net week Mondays (Jan 6, 2025, to Dec 29, 2025)
             DateTime [] netMondays = Enumerable.Range (0, 53)
                 .Select (w => new DateTime (endDate.Year, 1, 6).AddDays (w * 7))
                 .ToArray ();
 
-            // Find the Monday of the net week
             DateTime adjustedEndDate = endDate;
             if (endDate.DayOfWeek == DayOfWeek.Sunday) adjustedEndDate = endDate.AddDays (-1);
             else if (endDate.DayOfWeek == DayOfWeek.Monday) adjustedEndDate = endDate.AddDays (-2);
@@ -2839,6 +2846,13 @@ class Winlink_Checkins
             if (!string.IsNullOrWhiteSpace (newCheckinsStr))
             {
                 newTabRange = AppendToNewTab (newCheckinsStr, spreadsheetId, service);
+            }
+
+            // Process removals: copy rows to "Removals" with today's date, then delete from yearly tab
+            string removalStr = removalString.ToString ();
+            if (!string.IsNullOrWhiteSpace (removalStr))
+            {
+                ProcessRemovals (removalStr, spreadsheetId, service, yearTab);
             }
 
             // Update "2025" tab rows 1 and 2 with netCheckinString
@@ -2867,7 +2881,6 @@ class Winlink_Checkins
             // Insert latest "New" tab row into yearly tab if newCheckins was appended
             if (!string.IsNullOrWhiteSpace (newCheckinsStr) && newTabRange != null)
             {
-                // Get the latest row from "New" tab with formulas
                 string [] rangeParts = newTabRange.Split ('!');
                 int newTabRowNum = int.Parse (rangeParts [1].Split (':') [0].Substring (1));
                 string newTabRowRange = $"{rangeParts [0]}!A{newTabRowNum}:BO{newTabRowNum}";
@@ -2878,7 +2891,6 @@ class Winlink_Checkins
 
                 if (newTabRow != null)
                 {
-                    // Get existing callsigns from yearly tab for sorting
                     string yearlyRange = $"{yearTab}!A6:A";
                     var yearlyResponse = service.Spreadsheets.Values.Get (spreadsheetId, yearlyRange).Execute ();
                     var values = yearlyResponse?.Values ?? new List<IList<object>> ();
@@ -2913,7 +2925,6 @@ class Winlink_Checkins
                             if (i == values.Count - 1) insertRow = 6 + values.Count;
                         }
 
-                        // Adjust formulas in newTabRow for the target row
                         var adjustedRow = new List<object> ();
                         foreach (var cell in newTabRow)
                         {
@@ -2929,7 +2940,6 @@ class Winlink_Checkins
                             adjustedRow.Add (cellValue);
                         }
 
-                        // Insert a new row
                         var insertRequests = new List<Request>
                     {
                         new Request
@@ -2951,7 +2961,6 @@ class Winlink_Checkins
                         var insertBatchUpdate = new BatchUpdateSpreadsheetRequest { Requests = insertRequests };
                         service.Spreadsheets.BatchUpdate (insertBatchUpdate, spreadsheetId).Execute ();
 
-                        // Update with the adjusted row
                         string updateRange = $"{yearTab}!A{insertRow}:BO{insertRow}";
                         var valueRange = new ValueRange
                         {
@@ -2961,7 +2970,6 @@ class Winlink_Checkins
                         update.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
                         update.Execute ();
 
-                        // Set font size to 8pt for the new row in "2025" tab
                         var formatRequests = new List<Request>
                     {
                         new Request
@@ -3030,7 +3038,6 @@ class Winlink_Checkins
             appendRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum.USERENTERED;
             var response = appendRequest.Execute ();
 
-            // Set font size to 8pt for the appended row in "New" tab
             string [] rangeParts = response.Updates.UpdatedRange.Split ('!');
             int appendedRowNum = int.Parse (rangeParts [1].Split (':') [0].Substring (1));
             var formatRequests = new List<Request>
@@ -3071,6 +3078,164 @@ class Winlink_Checkins
         }
     }
 
+    private static void ProcessRemovals (string removalData, string spreadsheetId, SheetsService service, string yearTab)
+    {
+        try
+        {
+            // Split removalData into lines for multiple removals
+            var removalLines = removalData.Split (new [] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+            if (removalLines.Length == 0)
+            {
+                Console.WriteLine ("No valid removal entries found.");
+                return;
+            }
+
+            // Fetch all data from yearly tab once (A6:BO)
+            string yearlyRange = $"{yearTab}!A6:BO";
+            var yearlyResponse = service.Spreadsheets.Values.Get (spreadsheetId, yearlyRange).Execute ();
+            var values = yearlyResponse?.Values ?? new List<IList<object>> ();
+
+            // Process each removal
+            foreach (var line in removalLines)
+            {
+                // Extract callsign (first field before tab)
+                string callsignToRemove = line.Split ('\t') [0].Trim ();
+                Console.WriteLine ($"Processing removal for callsign: '{callsignToRemove}'");
+
+                // Find the row to copy and delete
+                int rowToDelete = -1;
+                IList<object> rowToCopy = null;
+                for (int i = 0; i < values.Count; i++)
+                {
+                    if (values [i].Count > 0 && values [i] [0].ToString () == callsignToRemove)
+                    {
+                        rowToDelete = 6 + i; // 1-based row index in sheet
+                        rowToCopy = values [i];
+                        break;
+                    }
+                }
+
+                if (rowToDelete == -1 || rowToCopy == null)
+                {
+                    Console.WriteLine ($"No matching callsign '{callsignToRemove}' found in {yearTab} tab for removal.");
+                    continue; // Skip to next removal
+                }
+
+                // Modify column B (index 1) with today's date
+                var modifiedRow = new List<object> (rowToCopy);
+                while (modifiedRow.Count < 2) modifiedRow.Add (""); // Ensure at least 2 columns
+                modifiedRow [1] = DateTime.Today.ToString ("yyyy-MM-dd"); // Column B gets today's date
+
+                // Append the modified row to "Removals" tab
+                var valueRange = new ValueRange
+                {
+                    Values = new List<IList<object>> { modifiedRow }
+                };
+                string removalsRange = "Removals!A:A";
+                var appendRequest = service.Spreadsheets.Values.Append (valueRange, spreadsheetId, removalsRange);
+                appendRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.AppendRequest.ValueInputOptionEnum.USERENTERED;
+                var appendResponse = appendRequest.Execute ();
+
+                string [] rangeParts = appendResponse.Updates.UpdatedRange.Split ('!');
+                int appendedRowNum = int.Parse (rangeParts [1].Split (':') [0].Substring (1));
+
+                // Format: 8pt font for entire row, light green background for column A
+                var formatRequests = new List<Request>
+            {
+                // 8pt font for A:BO
+                new Request
+                {
+                    RepeatCell = new RepeatCellRequest
+                    {
+                        Range = new GridRange
+                        {
+                            SheetId = GetSheetId(service, spreadsheetId, "Removals"),
+                            StartRowIndex = appendedRowNum - 1,
+                            EndRowIndex = appendedRowNum,
+                            StartColumnIndex = 0,
+                            EndColumnIndex = 67 // A to BO
+                        },
+                        Cell = new CellData
+                        {
+                            UserEnteredFormat = new CellFormat
+                            {
+                                TextFormat = new TextFormat { FontSize = 8 }
+                            }
+                        },
+                        Fields = "userEnteredFormat.textFormat.fontSize"
+                    }
+                },
+                // Light green background for column A only
+                new Request
+                {
+                    RepeatCell = new RepeatCellRequest
+                    {
+                        Range = new GridRange
+                        {
+                            SheetId = GetSheetId(service, spreadsheetId, "Removals"),
+                            StartRowIndex = appendedRowNum - 1,
+                            EndRowIndex = appendedRowNum,
+                            StartColumnIndex = 0, // A
+                            EndColumnIndex = 1    // A (exclusive, so just column A)
+                        },
+                        Cell = new CellData
+                        {
+                            UserEnteredFormat = new CellFormat
+                            {
+                                BackgroundColor = new Color
+                                {
+                                    Red = 217 / 255.0f,   // RGB 204, 255, 204
+                                    Green = 234 / 255.0f, // 182, 215, 168
+                                    Blue = 212 / 255.0f   // Red: 217​, Green: 234​, Blue: 212​ 
+                                }
+                            }
+                        },
+                        Fields = "userEnteredFormat.backgroundColor"
+                    }
+                }
+            };
+                var formatBatchUpdate = new BatchUpdateSpreadsheetRequest { Requests = formatRequests };
+                service.Spreadsheets.BatchUpdate (formatBatchUpdate, spreadsheetId).Execute ();
+
+                Console.WriteLine ($"Copied row for '{callsignToRemove}' to 'Removals' tab at {appendResponse.Updates.UpdatedRange} with today's date in column B, 8pt font, and light green A-column");
+
+                // Delete the row from the yearly tab
+                var deleteRequest = new BatchUpdateSpreadsheetRequest
+                {
+                    Requests = new List<Request>
+                {
+                    new Request
+                    {
+                        DeleteRange = new DeleteRangeRequest
+                        {
+                            Range = new GridRange
+                            {
+                                SheetId = GetSheetId(service, spreadsheetId, yearTab),
+                                StartRowIndex = rowToDelete - 1, // 0-based index
+                                EndRowIndex = rowToDelete,
+                                StartColumnIndex = 0,
+                                EndColumnIndex = 67 // A to BO
+                            },
+                            ShiftDimension = "ROWS"
+                        }
+                    }
+                }
+                };
+                service.Spreadsheets.BatchUpdate (deleteRequest, spreadsheetId).Execute ();
+
+                Console.WriteLine ($"Removed row with callsign '{callsignToRemove}' from {yearTab} tab at row {rowToDelete}");
+
+                // Refresh yearly tab data after deletion
+                yearlyResponse = service.Spreadsheets.Values.Get (spreadsheetId, yearlyRange).Execute ();
+                values = yearlyResponse?.Values ?? new List<IList<object>> ();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine ($"Error processing removals: {ex.Message}");
+        }
+    }
+
     private static string GetColumnLetter (int weekNumber)
     {
         int columnNumber = weekNumber + 14; // Week 1 = O (15th), Week 53 = BO (67th)
@@ -3103,4 +3268,3 @@ class Winlink_Checkins
         return sheet.Properties.SheetId.Value;
     }
 }
-
