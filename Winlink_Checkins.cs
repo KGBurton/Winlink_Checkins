@@ -588,7 +588,7 @@ class Winlink_Checkins
 
                     bool QTH = fileText.Contains ("TO: QTH") || fileText.Contains ("CC: QTH");
 
-                    // check for removal message and discard                  
+                    // check for removal message               
                     var removal = fileText.IndexOf ("REMOVE ME");
 
                     // look to see if it was a bounced message
@@ -661,9 +661,28 @@ class Winlink_Checkins
                     if (removal > 0)
                     {
 
+                        fromTxt = fromTxt.Trim ().TrimEnd ('\r', '\n');
                         removalString.AppendLine (fromTxt + "\tin " + messageID + " was a removal request.");
                         removalCt++;
-                        junk = 0;  // debug Console.Write("Removal Request: "+file+", skipping.");
+                        // Remove callsign from roster (string)
+                        if (roster.Contains ($";{fromTxt};"))
+                        {
+                            roster = roster.Replace ($";{fromTxt};", ";"); // middle of the string
+                        }
+                        else if (roster.StartsWith ($"{fromTxt};")) 
+                        {
+                            roster = roster.Replace ($"{fromTxt};", ""); // beginning of the string
+                        }
+                        else if (roster.EndsWith ($";{fromTxt}"))
+                        {
+                            roster = roster.Replace ($";{fromTxt}", ""); // end of the string
+                        }
+                        else if (roster == fromTxt)
+                        {
+                            roster = ""; // it was the only one in the string
+                        }
+                        Console.WriteLine ($"Removed '{fromTxt}' from roster.");
+                        // junk = 0;  // debug Console.Write("Removal Request: "+file+", skipping.");
                     }
 
                     // discard acknowledgements
