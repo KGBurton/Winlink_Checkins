@@ -241,6 +241,7 @@ class Winlink_Checkins
         int ICS201Ct = 0;
         int ICS202Ct = 0;
         int ICS203Ct = 0;
+        int ICS204Ct = 0;
         int exerciseCompleteCt = 0;
         int radioGram = 0;
         int radioGramCt = 0;
@@ -640,8 +641,11 @@ class Winlink_Checkins
                     // check for ICS-202
                     var ICS202 = fileText.IndexOf ("ICS202_INCIDENT_OBJECTIVES");
 
-                    // check for ICS-202
+                    // check for ICS-203
                     var ICS203 = fileText.IndexOf ("ICS 203 ORGANIZATIONAL ASSIGNMENTS");
+
+                    // check for ICS-204
+                    var ICS204 = fileText.IndexOf ("ICS 204 ASSIGNMENT LIST");
 
                     // check for WhatThreeWords
                     if (fileText.IndexOf ("///") > -1 || fileText.IndexOf ("W3W") > -1 || fileText.IndexOf ("WHAT 3 WORDS") > -1 || fileText.IndexOf ("WHAT3WORDS") > -1 || fileText.IndexOf ("WHATTHREEWORDS") > -1 || fileText.IndexOf ("UTMREF") > -1 || fileText.IndexOf ("MGRS") > -1)
@@ -661,7 +665,7 @@ class Winlink_Checkins
                     if (removal > 0)
                     {
 
-                        fromTxt = fromTxt.Trim ().TrimEnd ('\r', '\n');
+                        fromTxt = fromTxt.Trim ().TrimEnd ('\r', '\n'); // Clean fromTxt to strip any whitespace or newlines (e.g., "W0JW\n" -> "W0JW")
                         removalString.AppendLine (fromTxt + "\tin " + messageID + " was a removal request.");
                         removalCt++;
                         // Remove callsign from roster (string)
@@ -1045,7 +1049,8 @@ class Winlink_Checkins
                             // if (radioGram > 0) exerciseCompleteCt++; // 20250210 exercise
                             // if (ICS202 > -1) exerciseCompleteCt++; // 20250217 for exercise
                             // if (w3w > -1) exerciseCompleteCt++; // 20250303 for W3W exercise
-                            if (ICS203 > -1) exerciseCompleteCt++; // 202500317 exercise
+                            // if (ICS203 > -1) exerciseCompleteCt++; // 202500317 exercise
+                            if (ICS204 > -1) exerciseCompleteCt++; // 20250421 exercise
 
                             if (radioGram > 0) msgField = msgField.Replace ("\r\n", " "); // Radiogram chops the message into 40 byte strings, so put it back together
                             checkinItems = new string [] { };
@@ -1406,7 +1411,7 @@ class Winlink_Checkins
                                         isPerfect = false;
                                         score--;
                                         if (checkinItems [7] == "VHF") tempStr = ", try \"VARA FM\" or \"PACKET\"";
-                                        if (checkinItems [7].Contains ("PACKET")) tempStr = ", try just \"PACKET\"";
+                                        if (checkinItems [7].Contains ("PACKET")) checkinItems [7] = "PACKET";
                                         if (bandStr == "TELNET") tempStr = ", try SMTP";
                                         pointsOff += "\tminus 1 point, missing or invalid mode in field 8 - " + checkinItems [7].Trim () + tempStr + "\r\n";
                                         if (msgField.IndexOf ("AREDN") > -1) pointsOff += "\tAREDN is a project, not a valid mode. Try \"MESH\"\r\n";
@@ -1440,6 +1445,8 @@ class Winlink_Checkins
                                 if (ICS201 > -1) ICS201Ct++;
                                 if (ICS202 > -1) ICS202Ct++;
                                 if (ICS203 > -1) ICS203Ct++;
+                                if (ICS204 > -1) ICS204Ct++;
+
                                 testString = testString + checkIn + " | ";
                                 // the spreadsheet chokes if the string ends with "|" so
                                 // don't let that happen by writing the first one without a delimiter
@@ -1569,6 +1576,14 @@ class Winlink_Checkins
                                         else
                                         {
                                             // no valid GPS coordinates found, look for a maidenhead grid
+                                            // linda in AK uses something funky to checkin and never puts things in the correct format.
+                                            // This should at least keep her from showing up in the Atlantic Ocean
+                                            if (fromTxt == "AD4BL")
+                                            {
+                                                fileText = fileText.Insert (endPosition-1, ", BP64JU\r\n").Replace ("  ", ", ");
+                                                endPosition = fileText.IndexOf ("--BOUNDARY", endPosition);
+                                                len = endPosition - startPosition;
+                                            }
                                             maidenheadGrid = ExtractMaidenheadGrid (fileText.Substring (startPosition, len));
                                             if (maidenheadGrid == "invalid") { Console.WriteLine (messageID); maidenheadGrid = ""; }
                                             if (!string.IsNullOrEmpty (maidenheadGrid))
@@ -2158,11 +2173,12 @@ class Winlink_Checkins
             if (ICS201Ct > 0) { logWrite.WriteLine ("ICS 201 Checkins: " + ICS201Ct); }
             if (ICS202Ct > 0) { logWrite.WriteLine ("ICS 202 Checkins: " + ICS202Ct); }
             if (ICS203Ct > 0) { logWrite.WriteLine ("ICS 203 Checkins: " + ICS203Ct); }
+            if (ICS204Ct > 0) { logWrite.WriteLine ("ICS 204 Checkins: " + ICS204Ct); }
 
             if (radioGram > 0) { logWrite.WriteLine ("Radiogram Checkins: " + radioGramCt); }
             // next line is for the 20250203 exercise
             // logWrite.WriteLine ("Winlink Express: " + winlinkCt + "  PAT: " + patCt + "  RadioMail: " + radioMailCt + "  WoAD: " + woadCt + "\r\n");
-            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickMCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct) + "\r\n");
+            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickMCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct - ICS204Ct) + "\r\n");
             //var totalValidGPS = mapCt-noGPSCt;
             logWrite.WriteLine ("Total Checkins with a perfect message: (Not including " + noScoreCt + " NoScore's) " + perfectScoreCt);
             logWrite.WriteLine ("Total Checkins using the new format: " + newFormatCt);
@@ -2558,9 +2574,8 @@ class Winlink_Checkins
     }
     public static string checkMode (string input, string input2)
     {
+        if (input.IndexOf ("AREDN") > -1 || input.IndexOf ("MESH") > -1) input = "MESH";
         input = input
-            .Replace ("AREDNMESH", "MESH")
-            .Replace ("AREDN", "MESH")
             .Replace ("VERA", "VARA")
             .Replace ("WINLINK", "")
             .Replace ("-", " ")
@@ -2782,6 +2797,7 @@ class Winlink_Checkins
             .Replace (" |", "|")
             .Replace ("| ", "|")
             .Replace ("\"", "")
+            .Replace ("XX","")
             .Replace ("#","") // strip out a single # for those that formatted ## incorrectly
             .Replace ("/", ",") // this was to allow Radiogram forms to use "/" since commas are not permitted
                                 // .Replace ("\r\n", "") // some messages get a line wrap that messes things up
