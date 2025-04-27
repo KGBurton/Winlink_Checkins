@@ -106,7 +106,7 @@ class Winlink_Checkins
         // Get the native call sign from the user to find the messages folder.
         string currentFolder = "";
         string applicationFolder = Directory.GetCurrentDirectory ();
-        Console.WriteLine ("Enter YOUR call sign to find the messages folder. \n     If you leave it blank, the program will assume that it is already operating from the messages folder: \n\t"+applicationFolder);
+        Console.WriteLine ("Enter YOUR call sign to find the messages folder. \n     If you leave it blank, the program will assume that it is already operating from the messages folder: \n\t" + applicationFolder);
         string yourCallSign = Console.ReadLine ();
 
         // Get the data folder - either the global messages folder (default) or the current
@@ -235,6 +235,7 @@ class Winlink_Checkins
         int score = 10;
         // int rowsToSkip = 0;
         int noScoreCt = 0;
+        int APRS = -1;
         int js8call = 0;
         int PosRepCt = 0;
         int copyPR = -1;
@@ -410,8 +411,23 @@ class Winlink_Checkins
                     len = endPosition - startPosition;
                     string messageID = fileText.Substring (startPosition, len);
                     reminderTxt = ""; // reset the text that goes into the xml personalized message
+
+                    // was it APRSmail?
+                    if (fileText.IndexOf ("APRSEMAIL2") > -1 || fileText.IndexOf ("APRS.EARTH") > -1 || fileText.IndexOf ("APRS.FI") > -1)
+                    {
+                        APRS = 1;
+                        startPosition = fileText.IndexOf ("SUBJECT:"); // if it is APRS, the first From: is going to be the APRS server
+                        aprsCt++;
+                    }
+                    else
+                    {
+                        APRS = -1;
+                        startPosition = 0;
+                    }
+
                     // get From:
-                    startPosition = fileText.IndexOf ("FROM:");
+                    startPosition = fileText.IndexOf ("FROM:", startPosition);
+
                     if (startPosition > -1) { startPosition += 6; }
                     endPosition = fileText.IndexOf ("\r\n", startPosition);
                     len = endPosition - startPosition;
@@ -441,10 +457,6 @@ class Winlink_Checkins
                     // deterimine if it was forwarded to know to look below the first header info
                     var forwarded = fileText.IndexOf ("WAS FORWARDED BY");
 
-                    // was it APRSmail?
-                    var APRS = fileText.IndexOf ("APRSEMAIL2");
-                    if (APRS < 0) APRS = fileText.IndexOf ("APRS.EARTH");
-                    if (APRS < 0) APRS = fileText.IndexOf ("APRS.FI");
                     // was it JS8CALL
                     js8call = fileText.IndexOf ("JS8CALL");
                     if (js8call > -1) js8ct++;
@@ -562,6 +574,7 @@ class Winlink_Checkins
                         if (longitudeStr != "") { longitude = Common.ConvertToDouble (longitudeStr); }
                     }
 
+
                     if (!PosReport)
                     {
                         copyPR = fileText.IndexOf ("POSITION REPORT ACKNOWLEDGEMENT");
@@ -673,7 +686,7 @@ class Winlink_Checkins
                         {
                             roster = roster.Replace ($";{fromTxt};", ";"); // middle of the string
                         }
-                        else if (roster.StartsWith ($"{fromTxt};")) 
+                        else if (roster.StartsWith ($"{fromTxt};"))
                         {
                             roster = roster.Replace ($"{fromTxt};", ""); // beginning of the string
                         }
@@ -734,11 +747,13 @@ class Winlink_Checkins
                         // extended to include the TO: field in case they didn't put the netName in the subject
                         startPosition = fileText.IndexOf ("SUBJECT:");
                         if (startPosition > -1) { startPosition += 9; }
-                        endPosition = fileText.IndexOf ("MESSAGE-ID", startPosition);
-                        len = endPosition - startPosition;
+                        endPosition = fileText.IndexOf ("CC:", startPosition);
+                        if (endPosition == -1) endPosition = fileText.IndexOf ("MESSAGE-ID", startPosition);
+                        if (endPosition > 0) len = endPosition - startPosition;
                         string subjText = fileText.Substring (startPosition, len); // includes the TO: and CC: fields to find the netName
 
                         // if (subjText.Contains (netName))
+
                         if (fileText.Contains (netName))
                         {
                             score = 10;
@@ -758,22 +773,41 @@ class Winlink_Checkins
 
                             // Does the message have the new format starting and ending with ##
                             startPosition = fileText.IndexOf ("##");
+                            // check to see that it really is the start of the data
+                            // if the "|" precedes the "##" it was put only at the end
+                            if (startPosition > -1 && fileText.IndexOf ("|",startPosition ) == -1)
+                            { endPosition = startPosition;
+                                startPosition = fileText.LastIndexOf ("\r\n", endPosition)+2;
+                                if (fileText.IndexOf ("|", startPosition) == -1) startPosition = -1;
+                            }
                             if (startPosition > -1)
                             {
                                 startPosition += 2;
                                 endPosition = fileText.IndexOf ("##", startPosition);
-                                isValid = false;
-                                while (isValid == false)
+                                if (endPosition > -1) isValid = true;
+                                while (isValid == true)
                                 {
                                     int anotherEnd = fileText.IndexOf ("##", endPosition + 2);
                                     if (anotherEnd > -1) endPosition = anotherEnd;
-                                    else isValid = true;
+                                    else isValid = false;
                                 }
                                 if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
                                 if (endPosition <= startPosition) startPosition = fileText.IndexOf ("|", endHeader);
                                 // new format found
                                 newFormat = true;
                             }
+                            else if (fileText.IndexOf ("#") > -1 && fileText.IndexOf ("|") > -1) // new format almost but only one # for delimiter,
+                                                                                                 // hoping that the combo is unique enough
+                            {
+
+                                endPosition = fileText.IndexOf ("|");
+                                startPosition = fileText.LastIndexOf ("\r\n", endPosition) + 2;
+                                endPosition = fileText.IndexOf ("#", startPosition + 1);
+                                if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
+
+
+                            }
+
                             else // this sections finds the msgField location within the checkin data
                             {
                                 // skip APRS header 
@@ -786,7 +820,7 @@ class Winlink_Checkins
                                         if (startPosition > -1) { startPosition += 2; }
                                         endPosition = fileText.IndexOf ("DO NOT REPLY", startPosition) - 1;
                                     }
-                                    aprsCt++;
+
                                 }
                                 // skip JS8Call header 
 
@@ -930,6 +964,14 @@ class Winlink_Checkins
                                     endPosition = fileText.IndexOf ("5. SAFETY PLAN", startPosition) - 1;
                                 }
 
+                                else if (ICS204 > -1)
+                                {
+                                    startPosition = fileText.IndexOf ("7. SPECIAL INSTRUCTIONS:");
+                                    // startPosition = quotedPrintable;
+                                    startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
+                                    endPosition = fileText.IndexOf ("8. COMMUNICATIONS", startPosition) - 1;
+                                }
+
                                 else if (PosReport || copyPR > -1)
                                 {
                                     //if (copyPR == 0) reminderTxt += "No checkin information/Comment: tag in the message";
@@ -1036,7 +1078,11 @@ class Winlink_Checkins
                                     endPosition = lastBoundary;
                                 }
                             }
+                            if (!newFormat) reminderTxt += "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data!";
+
                             if (endPosition <= startPosition) endPosition = lastBoundary;
+
+                            string originalMsgField = fileText.Substring (startPosition, endPosition - startPosition);
                             msgField = getMsgField (startPosition, endPosition, messageID, fileText, msgField);
 
                             // string checkinFrom = checkIn;
@@ -1152,7 +1198,10 @@ class Winlink_Checkins
                                 if (len < 8)
                                 {
                                     score = score - (8 - len);
-                                    pointsOff += "\tminus " + (8 - len) + " point(s), for missing delimiter(s)/fields - see examples below.\r\n";
+                                    // pointsOff += "\tminus " + (8 - len) + " point(s), for missing delimiter(s)/fields - see examples below.\r\n"; 
+                                    pointsOff += "\tminus " + (8 - len) + " point(s), for missing delimiter(s)/fields - see examples below.";
+                                    if (APRS > -1) pointsOff += " - maybe because you checked in via APRS.";
+                                    pointsOff += "\r\n";
                                     if ((msgField.IndexOf ("|") > -1) && (msgField.IndexOf (",") > -1)) pointsOff += "\tYou may have mixed the '|' and ',' delimiters in the check in data.";
                                     isPerfect = false;
                                 }
@@ -1175,11 +1224,14 @@ class Winlink_Checkins
                                     checkinCountry = isValidField (checkinItems [5].Trim ().Trim (','), countries);
                                     countries = "COLOMBIA,BELGIUM,PHILIPPINES,TRINIDAD,GERMANY,ENGLAND,NORWAY,NEW ZEALAND,ST LUCIA,VENEZUELA,AUSTRIA,ROMANIA,CANADA,SERBIA";
                                     checkinCountryLong = isValidField (checkinItems [5].Trim (), countries);
+                                    // if (checkinCountry.Length != 3) checkinCountry =  "";
+
                                     if (checkinCountry == "")
                                     {
                                         isPerfect = false;
                                         score--;
-                                        pointsOff += "\tminus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - " + checkinItems [5].Trim ();
+                                        pointsOff += "\tminus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - " + checkinItems [5].Trim () + ", try USA, PHL, DEU, COL, VEN, CAN, AUS, AUT, TTO, NZL, BEL, NOR, ROU, SRB, LCA, etc";
+
                                     }
                                 }
                                 if (checkinItems.Length >= 5)
@@ -1395,7 +1447,7 @@ class Winlink_Checkins
                                     {
                                         isPerfect = false;
                                         score--;
-                                        pointsOff += "\tminus 1 point, missing or invalid band in field 7 - " + checkinItems [6].Trim () + "\r\n";
+                                        pointsOff += "\tminus 1 point, missing or invalid band in field 7 - " + checkinItems [6].Trim () + ", try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.\r\n";
                                         if (msgField.IndexOf ("AREDN") > -1) pointsOff += "\tAREDN is a project, not a valid band. Try \"5CM, 9CM, 13CM, 33CM, or SHF.\"\r\n";
 
                                     }
@@ -1404,16 +1456,16 @@ class Winlink_Checkins
                                 if (checkinItems.Length >= 8)
                                 {
                                     modeStr = checkinItems [7].Trim ();
+                                    if (modeStr.Contains ("PACKET")) modeStr = "PACKET";
                                     modeStr = checkMode (modeStr, bandStr);
                                     string tempStr = "";
-                                    if (modeStr == "")
+                                    if (modeStr == "" )
                                     {
                                         isPerfect = false;
                                         score--;
-                                        if (checkinItems [7] == "VHF") tempStr = ", try \"VARA FM\" or \"PACKET\"";
-                                        if (checkinItems [7].Contains ("PACKET")) checkinItems [7] = "PACKET";
+                                        // if (bandStr == "VHF" || bandStr == "UHF") tempStr = ", try \"VARA FM\" or \"PACKET\"";
                                         if (bandStr == "TELNET") tempStr = ", try SMTP";
-                                        pointsOff += "\tminus 1 point, missing or invalid mode in field 8 - " + checkinItems [7].Trim () + tempStr + "\r\n";
+                                        pointsOff += "\tminus 1 point, missing or invalid mode in field 8 - " + checkinItems [7].Trim () + tempStr + ", try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)\r\n";
                                         if (msgField.IndexOf ("AREDN") > -1) pointsOff += "\tAREDN is a project, not a valid mode. Try \"MESH\"\r\n";
                                     }
                                 }
@@ -1580,7 +1632,7 @@ class Winlink_Checkins
                                             // This should at least keep her from showing up in the Atlantic Ocean
                                             if (fromTxt == "AD4BL")
                                             {
-                                                fileText = fileText.Insert (endPosition-1, ", BP64JU\r\n").Replace ("  ", ", ");
+                                                fileText = fileText.Insert (endPosition - 1, ", BP64JU\r\n").Replace ("  ", ", ");
                                                 endPosition = fileText.IndexOf ("--BOUNDARY", endPosition);
                                                 len = endPosition - startPosition;
                                             }
@@ -1609,6 +1661,7 @@ class Winlink_Checkins
                                                 noGPSFlag++;
                                                 score -= 2;
                                                 msgField = msgField + ",No Location Data Found in message";
+                                                if (APRS > -1) msgField = msgField + " - perhaps because you checked in via APRS. ";
                                                 noGPSString.Append ("\t" + messageID + "- - " + checkIn + ": latitude set to: " + latitude + " longitude set to: " + longitude + "\r\n");
                                             }
                                         }
@@ -1624,61 +1677,6 @@ class Winlink_Checkins
                                 msgFieldNumbered = fillFieldNum (msgField);
                                 csvString.Append (checkIn + ":" + messageID + "," + latitude + "," + longitude + "," + locType + "," + msgField + "\r\n");
 
-                                //// find the band if it's where it's supposed to be
-                                //bandStr = "";
-                                //modeStr = "";
-
-                                //// debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
-                                //// finding the band based on the 6th and 7th occurrences of the delimiter 
-                                //// this is archaic and should be superceded by the split stuff below
-                                //startPosition = IndexOfNthSB (msgField, (char)44, 0, 6) + 1; // check 
-                                //if (startPosition > 0)
-                                //{
-                                //    endPosition = IndexOfNthSB (msgField, (char)44, 0, 7); len = endPosition - startPosition;
-                                //}
-                                //else // check for "|" instead
-                                //{
-                                //    startPosition = IndexOfNthSB (msgField, (char)124, 0, 6) + 1;
-                                //    if (startPosition > -1) { endPosition = IndexOfNthSB (msgField, (char)124, 0, 7); len = endPosition - startPosition; }
-
-                                //}
-
-                                //if (len > 0 && msgField.Length >= len)
-                                //{
-                                //    bandStr = msgField.Substring (startPosition, len);
-                                //}
-                                //// winlink checkin has fields for band and mode so look there if not in the message
-                                //if (bandStr == "" && winlinkCkin > 0)
-                                //{
-                                //    startPosition = fileText.IndexOf ("BAND:");
-                                //    if (startPosition == -1)
-                                //    {
-                                //        // try another label that I have seen instead
-                                //        startPosition = fileText.IndexOf ("BAND USED:");
-                                //        if (startPosition > -1) { startPosition += 11; }
-                                //    }
-                                //    else { startPosition = startPosition + 6; }
-
-                                //    if (startPosition > -1)
-                                //    {
-                                //        endPosition = fileText.IndexOf ("\r\n", startPosition);
-                                //        len = endPosition - startPosition;
-                                //        if (len > 0) { bandStr = fileText.Substring (startPosition, len); }
-                                //    }
-                                //}
-                                //if (bandStr == "")
-                                //{
-                                //    if (msgField.IndexOf ("VARA FM") > -1)
-                                //    {
-                                //        modeStr = "VARA FM";
-                                //        // bandStr = "VARA FM";
-                                //    }
-                                //    if (msgField.IndexOf ("VARA HF") > -1)
-                                //    {
-                                //        modeStr = "VARA HF";
-                                //        // bandStr = "VARA HF";
-                                //    }
-                                //}
                                 bandStr = bandStr
                                     .ToUpper ()
                                     .Replace ("5.8GHZ", "5CM")
@@ -1722,30 +1720,30 @@ class Winlink_Checkins
                                 bandStr = checkBand (bandStr);
                                 if (bandStr == "")
                                 {
-                                    // if both the band and the mode have invalid data, try scraping through the msgField
-                                    if (msgField.IndexOf ("3CM") > -1) { bandStr = "3CM"; }
-                                    if (msgField.IndexOf ("5CM") > -1) { bandStr = "5CM"; }
-                                    if (msgField.IndexOf ("13CM") > -1) { bandStr = "13CM"; }
-                                    if (msgField.IndexOf ("23CM") > -1) { bandStr = "23CM"; }
-                                    if (msgField.IndexOf ("33CM") > -1) { bandStr = "33CM"; }
-                                    if (msgField.IndexOf ("70CM") > -1) { bandStr = "70CM"; }
-                                    if (msgField.IndexOf ("1.25M") > -1) { bandStr = "1.25M"; }
-                                    if (msgField.IndexOf ("2M") > -1) { bandStr = "2M"; }
-                                    if (msgField.IndexOf ("10M") > -1) { bandStr = "10M"; }
-                                    if (msgField.IndexOf ("12M") > -1) { bandStr = "12M"; }
-                                    if (msgField.IndexOf ("15M") > -1) { bandStr = "15M"; }
-                                    if (msgField.IndexOf ("17M") > -1) { bandStr = "17M"; }
-                                    if (msgField.IndexOf ("20M") > -1) { bandStr = "20M"; }
-                                    if (msgField.IndexOf ("30M") > -1) { bandStr = "30M"; }
-                                    if (msgField.IndexOf ("40M") > -1) { bandStr = "40M"; }
-                                    if (msgField.IndexOf ("60M") > -1) { bandStr = "60M"; }
-                                    if (msgField.IndexOf ("6M") > -1) { bandStr = "6M"; }
-                                    if (msgField.IndexOf ("80M") > -1) { bandStr = "80M"; }
-                                    if (msgField.IndexOf ("HF") > -1) { bandStr = "HF"; }
-                                    if (msgField.IndexOf ("VHF") > -1) { bandStr = "VHF"; }
-                                    if (msgField.IndexOf ("UHF") > -1) { bandStr = "UHF"; }
-                                    if (msgField.IndexOf ("SHF") > -1) { bandStr = "SHF"; }
-                                    if (msgField.IndexOf ("TELNET") > -1) { bandStr = "TELNET"; }
+                                    // if both the band and the mode have invalid data, try scraping through the fileText
+                                    if (fileText.IndexOf ("3CM") > -1) { bandStr = "3CM"; }
+                                    if (fileText.IndexOf ("5CM") > -1) { bandStr = "5CM"; }
+                                    if (fileText.IndexOf ("13CM") > -1) { bandStr = "13CM"; }
+                                    if (fileText.IndexOf ("23CM") > -1) { bandStr = "23CM"; }
+                                    if (fileText.IndexOf ("33CM") > -1) { bandStr = "33CM"; }
+                                    if (fileText.IndexOf ("70CM") > -1) { bandStr = "70CM"; }
+                                    if (fileText.IndexOf ("1.25M") > -1) { bandStr = "1.25M"; }
+                                    if (fileText.IndexOf ("2M") > -1) { bandStr = "2M"; }
+                                    if (fileText.IndexOf ("10M") > -1) { bandStr = "10M"; }
+                                    if (fileText.IndexOf ("12M") > -1) { bandStr = "12M"; }
+                                    if (fileText.IndexOf ("15M") > -1) { bandStr = "15M"; }
+                                    if (fileText.IndexOf ("17M") > -1) { bandStr = "17M"; }
+                                    if (fileText.IndexOf ("20M") > -1) { bandStr = "20M"; }
+                                    if (fileText.IndexOf ("30M") > -1) { bandStr = "30M"; }
+                                    if (fileText.IndexOf ("40M") > -1) { bandStr = "40M"; }
+                                    if (fileText.IndexOf ("60M") > -1) { bandStr = "60M"; }
+                                    if (fileText.IndexOf ("6M") > -1) { bandStr = "6M"; }
+                                    if (fileText.IndexOf ("80M") > -1) { bandStr = "80M"; }
+                                    if (fileText.IndexOf ("HF") > -1) { bandStr = "HF"; }
+                                    if (fileText.IndexOf ("VHF") > -1) { bandStr = "VHF"; }
+                                    if (fileText.IndexOf ("UHF") > -1) { bandStr = "UHF"; }
+                                    if (fileText.IndexOf ("SHF") > -1) { bandStr = "SHF"; }
+                                    if (fileText.IndexOf ("TELNET") > -1) { bandStr = "TELNET"; }
 
                                     if (bandStr == "")
                                     {
@@ -1757,46 +1755,6 @@ class Winlink_Checkins
                                 }
                                 else { bandCt++; }
 
-                                //if (modeStr == "")
-                                //{
-                                //    // debug Console.Write("\r\nmsgField ="+msgField+"\r\n");
-                                //    startPosition = IndexOfNthSB (msgField, (char)44, 0, 7);
-                                //    // if (startPosition > -1) { startPosition += 1; }
-                                //    if (startPosition > -1)
-                                //    {
-                                //        endPosition = IndexOfNthSB (msgField, (char)44, 0, 8);
-                                //        startPosition += 1;
-                                //        len = endPosition - startPosition;
-                                //        if (len > 0 && msgField.Length >= len)
-                                //        {
-                                //            modeStr = msgField.Substring (startPosition, len);
-
-                                //        }
-                                //    }
-                                //    if (modeStr == "" && winlinkCkin > 0)
-                                //    {
-                                //        startPosition = fileText.IndexOf ("SESSION:");
-                                //        if (startPosition == -1)
-                                //        {
-                                //            // try another label that I have seen instead
-                                //            startPosition = fileText.IndexOf ("SESSION TYPE:");
-                                //            if (startPosition > -1)
-                                //            {
-                                //                startPosition += 14;
-                                //            }
-                                //        }
-                                //        else { startPosition += 9; }
-
-                                //        if (startPosition > -1)
-                                //        {
-                                //            endPosition = fileText.IndexOf ("\r\n", startPosition);
-                                //            len = endPosition - startPosition;
-                                //            if (len > 0) { modeStr = fileText.Substring (startPosition, len); }
-                                //        }
-                                //    }
-                                //}
-
-                                // if (modeStr.IndexOf (" ") > -1) { modeStr = removeFieldNumber (modeStr); }
                                 modeStr = modeStr
                                     .ToUpper ()
                                     .Trim ()
@@ -1840,18 +1798,18 @@ class Winlink_Checkins
                                 if (modeStr == "MESH") { meshCt++; }
                                 if (modeStr == "")
                                 {
-                                    if (msgField.IndexOf ("VARA FM") > -1) { modeStr = "VARA FM"; }
-                                    if (msgField.IndexOf ("VARA HF") > -1) { modeStr = "VARA HF"; }
-                                    if (msgField.IndexOf ("PACKET") > -1) { modeStr = "PACKET"; }
-                                    if (msgField.IndexOf ("PACTOR") > -1) { modeStr = "PACTOR"; }
-                                    if (msgField.IndexOf ("TELNET") > -1) { modeStr = "SMTP"; bandStr = "TELNET"; }
-                                    if (msgField.IndexOf ("SMTP") > -1) { modeStr = "SMTP"; bandStr = "TELNET"; }
-                                    if (msgField.IndexOf ("ARDOP") > -1) { modeStr = "ARDOP"; }
-                                    if (msgField.IndexOf ("PACKET") > -1) { modeStr = "PACKET"; }
-                                    if (msgField.IndexOf ("ROBUST PACKET") > -1) { modeStr = "ROBUST PACKET"; }
-                                    if (msgField.IndexOf ("VARA") > -1 && (bandStr == "VHF" || bandStr == "UHF" || bandStr == "SHF" || bandStr == "2M" || bandStr == "70CM" || bandStr == "1.25M" || bandStr == "33CM" || bandStr == "23CM" || bandStr == "13CM" || bandStr == "5CM" || bandStr == "3CM")) { modeStr = "VARA FM"; }
+                                    if (fileText.IndexOf ("VARA FM") > -1) { modeStr = "VARA FM"; }
+                                    if (fileText.IndexOf ("VARA HF") > -1) { modeStr = "VARA HF"; }
+                                    if (fileText.IndexOf ("PACKET") > -1) { modeStr = "PACKET"; }
+                                    if (fileText.IndexOf ("PACTOR") > -1) { modeStr = "PACTOR"; }
+                                    if (fileText.IndexOf ("TELNET") > -1) { modeStr = "SMTP"; bandStr = "TELNET"; }
+                                    if (fileText.IndexOf ("SMTP") > -1) { modeStr = "SMTP"; bandStr = "TELNET"; }
+                                    if (fileText.IndexOf ("ARDOP") > -1) { modeStr = "ARDOP"; }
+                                    if (fileText.IndexOf ("PACKET") > -1) { modeStr = "PACKET"; }
+                                    if (fileText.IndexOf ("ROBUST PACKET") > -1) { modeStr = "ROBUST PACKET"; }
+                                    if (fileText.IndexOf ("VARA") > -1 && (bandStr == "VHF" || bandStr == "UHF" || bandStr == "SHF" || bandStr == "2M" || bandStr == "70CM" || bandStr == "1.25M" || bandStr == "33CM" || bandStr == "23CM" || bandStr == "13CM" || bandStr == "5CM" || bandStr == "3CM")) { modeStr = "VARA FM"; }
 
-                                    if (msgField.IndexOf ("VARA") > -1 && (bandStr == "HF")) { modeStr = "VARA HF"; }
+                                    if (fileText.IndexOf ("VARA") > -1 && (bandStr == "HF")) { modeStr = "VARA HF"; }
 
                                     if (modeStr == "")
                                     {
@@ -1897,24 +1855,20 @@ class Winlink_Checkins
                                 {
                                     if (isPerfect)
                                     {
-                                        // reminderTxt += "\r\nThis is a copy of your message (with numbered fields) and extracted data. \r\nMessage: \r\n" + msgFieldNumbered + "\r\n\r\nPerfect Message! Your score is 10.";
-                                        reminderTxt += "\r\nThis is a copy of your message and extracted data. \r\nMessage: \r\n" + msgField + "\r\n\r\nPerfect Message! Your score is 10.";
+                                        reminderTxt += "\r\nThis is a copy of your extracted checkin data. \r\nMessage: \r\n" + msgField + "\r\n\r\nPerfect Message! Your score is 10.";
                                         perfectScoreCt++;
                                     }
                                     else
                                     {
-                                        // reminderTxt += "\r\n" + fileText + "\r\nThis is a copy of your message (with numbered fields) and extracted data. \r\nMessage: " + msgFieldNumbered + "\r\n\r\nYour score is: " + score + "\r\n" + pointsOff +
-                                        //    "\r\nRecommended format reminder in the Comment/Message field:\r\ncallSign, firstname, city, county, state/province/region, country, band, Mode, grid\r\n" +
-                                        //    "Example: xxNxxx, Greg, Sugar City, Madison, ID, USA, HF, VARA HF, DN43du\r\n" +
-                                        //    "Example 2: DxNxx,Mario,TONDO,MANILA,NCR,PHL,2M,VARA FM,PK04LO\r\n" +
-                                        //    "Example 2: xxNxx,Andre,Burnaby,,BC,CAN,TELNET,SMTP,CN89ud";
+
                                         if (msgFieldNumbered == "")
                                         {
                                             msgFieldNumbered = "Checkin data was not found";
                                             if (newFormat) msgFieldNumbered += " - probably because the checkin data did not start with ##.";
                                             else msgFieldNumbered += " - probably because you didn't use the ## marker at the ##beginning and end## of your checkin data or it was in the wrong place.";
+                                            if (APRS > -1) msgFieldNumbered += " - or because the checkin came via APRS.";
                                         }
-                                        reminderTxt += "\r\n" + "\r\nThis is a copy of your message and extracted data. \r\nMessage: " + msgField + "\r\n\r\nYour score is: " + score + "\r\n" + pointsOff +
+                                        reminderTxt += "\r\n" + "\r\nThis is a copy of your extracted checkin data. \r\nMessage: " + msgField + "\r\n\r\nYour score is: " + score + "\r\n" + pointsOff +
                                                "\r\nRecommended format reminder in the Comment/Message field:\r\ncallSign, firstname, city, county, state/province/region, country, band, Mode, grid\r\n" +
                                                "Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##\r\n" +
                                                "Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##\r\n" +
@@ -2253,7 +2207,7 @@ class Winlink_Checkins
 
         // Set the return values
         startDate = date;
-        endDate = date.AddDays (netLength); 
+        endDate = date.AddDays (netLength);
         weekDay = date.DayOfWeek.ToString ();
 
         return (startDate, endDate, weekDay);
@@ -2274,7 +2228,7 @@ class Winlink_Checkins
     // This method removes numbers and newlines from a name field:
     {
         string pattern = @".*\d.*(\r?\n)?";
-        input = input.ToUpper ().Replace("(","").Replace (")", "");
+        input = input.ToUpper ().Replace ("(", "").Replace (")", "");
         string result = Regex.Replace (input, pattern, "", RegexOptions.Multiline);
         // Regex regexName = new Regex (pattern, RegexOptions.IgnoreCase);
         // Match match = regexName.Match (input);
@@ -2296,7 +2250,7 @@ class Winlink_Checkins
     {
         input = input.ToUpper ().Trim ().Trim ('.');
         pattern = pattern.ToUpper () + ",NA,NONE";
-        int found = pattern.IndexOf (input + ",");
+        int found = pattern.IndexOf ("," + input + ",");
         if (found == -1) return "";
         return input;
     }
@@ -2305,7 +2259,7 @@ class Winlink_Checkins
     {
         // Define the regular expression for Maidenhead grid locator (4 or 6 character grids)
         Regex regex = new Regex (@"\b([A-R]{2}\d{2}[A-X]{0,2}[a-xA-X]{0,2})\b", RegexOptions.IgnoreCase);
-        input = input.Replace ("-", "").Replace(" ","") ;
+        input = input.Replace ("-", "").Replace (" ", "");
         // Search for a match in the input string
         Match match = regex.Match (input);
 
@@ -2624,7 +2578,7 @@ class Winlink_Checkins
 
             case "VARAHF":
             case "HFVARA":
-            case "HF":
+            // case "HF":
             case "HF VARA":
             case "VARA-HF":
                 input = "VARA HF";
@@ -2797,8 +2751,8 @@ class Winlink_Checkins
             .Replace (" |", "|")
             .Replace ("| ", "|")
             .Replace ("\"", "")
-            .Replace ("XX","")
-            .Replace ("#","") // strip out a single # for those that formatted ## incorrectly
+            .Replace ("XX", "")
+            .Replace ("#", "") // strip out a single # for those that formatted ## incorrectly
             .Replace ("/", ",") // this was to allow Radiogram forms to use "/" since commas are not permitted
                                 // .Replace ("\r\n", "") // some messages get a line wrap that messes things up
             .Trim ()
