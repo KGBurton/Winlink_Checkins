@@ -257,6 +257,12 @@ class Winlink_Checkins
         double longitude = 0;
         bool isPerfect = true;
         bool newFormat = false;
+        bool newFormatEndOnly = false;
+        bool newFormatStartOnly = false;
+        bool newFormatPipeOnly = false;
+        bool newFormatSingleOnly = false;
+        bool newFormatNoPipe = false;
+        bool onlyOneMarker = false;
 
 
         TextInfo textInfo = new CultureInfo ("en-US", false).TextInfo;
@@ -442,6 +448,7 @@ class Winlink_Checkins
 
                     // find the end of the header section
                     var endHeader = fileText.IndexOf ("CONTENT-TRANSFER-ENCODING:");
+                    // find the likely start of the message
                     quotedPrintable = fileText.IndexOf ("QUOTED-PRINTABLE");
 
                     if (quotedPrintable > -1) quotedPrintable += 20;
@@ -759,6 +766,12 @@ class Winlink_Checkins
                             score = 10;
                             isPerfect = true;
                             newFormat = false;
+                            newFormatEndOnly = false;
+                            newFormatStartOnly = false;
+                            newFormatPipeOnly = false;
+                            newFormatSingleOnly = false;
+                            newFormatNoPipe = false;
+                            onlyOneMarker = false;
                             pointsOff = "";
                             // get x-Source if available XXXX
                             var xSrc = fileText.IndexOf ("X-SOURCE: ");
@@ -773,17 +786,50 @@ class Winlink_Checkins
 
                             // Does the message have the new format starting and ending with ##
                             startPosition = fileText.IndexOf ("##");
+                            endPosition = fileText.IndexOf ("##", startPosition + 2);
+                            if (startPosition > -1 && endPosition >= startPosition) newFormat = true;
+
                             // check to see that it really is the start of the data
                             // if the "|" precedes the "##" it was put only at the end
-                            if (startPosition > -1 && fileText.IndexOf ("|",startPosition ) == -1)
-                            { endPosition = startPosition;
-                                startPosition = fileText.LastIndexOf ("\r\n", endPosition)+2;
-                                if (fileText.IndexOf ("|", startPosition) == -1) startPosition = -1;
-                            }
-                            if (startPosition > -1)
+                            var firstPipe = fileText.IndexOf ("|", quotedPrintable);
+                            if (startPosition > -1 && endPosition == -1) // only one ## marker
                             {
+                                onlyOneMarker = true;
+                                // var temp = (lastBoundary - quotedPrintable) / 2;
+                                if (lastBoundary - startPosition < startPosition - quotedPrintable) // assume ## is the end marker instead of the beginning
+                                {
+                                    newFormatEndOnly = true;
+                                    endPosition = startPosition;
+                                    if (quotedPrintable > -1) startPosition = quotedPrintable; // move the startPosition to the end of the header
+                                    else startPosition = endHeader;
+
+                                }
+                                else newFormatStartOnly = true;
+                                //if (firstPipe > -1)
+                                //{
+                                //    if (firstPipe < startPosition) 
+                                //    {
+                                //        endPosition = startPosition;
+                                //        if (quotedPrintable > -1) startPosition = quotedPrintable; // move the startPosition to the end of the header
+                                //        else startPosition = endHeader;
+                                //        newFormatEndOnly = true;
+                                //    }
+                                //    // if (endPosition - startPosition < 20) startPosition = endHeader;
+                                //    // if (fileText.IndexOf ("|", startPosition) == -1) startPosition = -1;
+                                //} 
+                                //else // assume some other delimiter 
+                                //{
+                                //    endHeader = 0;
+                                //    lastBoundary = 0;
+                                //}
+                            }
+
+
+                            if (newFormat && !newFormatEndOnly) // find the last ## marker in the case there are more than two
+                            {
+                                // newFormat = true; // new format found (two ## markers at least)
                                 startPosition += 2;
-                                endPosition = fileText.IndexOf ("##", startPosition);
+                                //endPosition = fileText.IndexOf ("##", startPosition);
                                 if (endPosition > -1) isValid = true;
                                 while (isValid == true)
                                 {
@@ -791,21 +837,31 @@ class Winlink_Checkins
                                     if (anotherEnd > -1) endPosition = anotherEnd;
                                     else isValid = false;
                                 }
-                                if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
-                                if (endPosition <= startPosition) startPosition = fileText.IndexOf ("|", endHeader);
-                                // new format found
-                                newFormat = true;
+                                // if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition); // if there is only a beginning marker, set the end position to the next return
+                                if (endPosition == -1) endPosition = lastBoundary; // if there is only a beginning marker, set the end position to the last boundary
+                                                                                   // if (endPosition <= startPosition) startPosition = fileText.IndexOf ("|", endHeader); //
+                                if (newFormatEndOnly)
+                                {
+                                    if (fileText.IndexOf ("|", endHeader) > -1) startPosition = fileText.LastIndexOf ("\r\n", endPosition) + 2; // backup to after the preceding return if there is a pipe after the header
+                                    else newFormatNoPipe = true;
+                                }
+
                             }
-                            else if (fileText.IndexOf ("#") > -1 && fileText.IndexOf ("|") > -1) // new format almost but only one # for delimiter,
-                                                                                                 // hoping that the combo is unique enough
+                            if (!onlyOneMarker && !newFormat && fileText.IndexOf ("|") > -1) newFormatPipeOnly = true; // no ## markers, but pipe delimiters are present
+                            if (!onlyOneMarker && !newFormat && fileText.IndexOf ("#") > -1 && fileText.IndexOf ("|") > -1) // new format almost but only one # for delimiter,
+                                                                                                                            // hoping that the combo is unique enough
                             {
+                                newFormatSingleOnly = true;
+                                startPosition = firstPipe; // set start to first pipe
+                                startPosition = fileText.LastIndexOf ("\r\n", startPosition) + 2; // reset to after the preceding return
+                                endPosition = fileText.IndexOf ("#", startPosition); // locate the # marker
+                                if (endPosition < firstPipe) // the # marker is at the beginning so swap positions
+                                {
+                                    startPosition = endPosition + 1;
+                                    endPosition = lastBoundary;
+                                }
 
-                                endPosition = fileText.IndexOf ("|");
-                                startPosition = fileText.LastIndexOf ("\r\n", endPosition) + 2;
-                                endPosition = fileText.IndexOf ("#", startPosition + 1);
                                 if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition);
-
-
                             }
 
                             else // this sections finds the msgField location within the checkin data
@@ -1059,7 +1115,11 @@ class Winlink_Checkins
                                     // end of the header information as the start of the msg field
                                     if (forwarded < 0)
                                     {
-                                        startPosition = quotedPrintable;
+                                        if (!newFormat && !newFormatStartOnly)
+                                        {
+                                            if (quotedPrintable > -1) startPosition = quotedPrintable;
+                                            else startPosition = endHeader;
+                                        }
                                     }
                                     else
                                     {
@@ -1078,8 +1138,16 @@ class Winlink_Checkins
                                     endPosition = lastBoundary;
                                 }
                             }
-                            if (!newFormat) reminderTxt += "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data!";
 
+                            if (newFormatEndOnly || newFormatStartOnly) reminderTxt = "\r\nYou are encouraged to use the new format with '##' at both the beginning and end of your checkin data";
+                            if (!newFormat) reminderTxt = "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data with '|' delimiters!";
+                            if (newFormatPipeOnly) reminderTxt = "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data";
+                            if (newFormatSingleOnly) reminderTxt = "\r\nIt appears that you tried to use the new format, but with a single '#'. You are encouraged to use the new format with '##' at both the beginning and end of your checkin data";
+                            if (newFormatNoPipe) reminderTxt += "\r\nYou are encouraged to use the '|' as the delimiter for your checkin data";
+
+                            if (startPosition == -1)
+                                if (quotedPrintable > -1) startPosition = quotedPrintable;
+                                else startPosition = endHeader;
                             if (endPosition <= startPosition) endPosition = lastBoundary;
 
                             string originalMsgField = fileText.Substring (startPosition, endPosition - startPosition);
@@ -1096,7 +1164,7 @@ class Winlink_Checkins
                             // if (ICS202 > -1) exerciseCompleteCt++; // 20250217 for exercise
                             // if (w3w > -1) exerciseCompleteCt++; // 20250303 for W3W exercise
                             // if (ICS203 > -1) exerciseCompleteCt++; // 202500317 exercise
-                            if (ICS204 > -1) exerciseCompleteCt++; // 20250421 exercise
+                            // if (ICS204 > -1) exerciseCompleteCt++; // 20250421 exercise
 
                             if (radioGram > 0) msgField = msgField.Replace ("\r\n", " "); // Radiogram chops the message into 40 byte strings, so put it back together
                             checkinItems = new string [] { };
@@ -1220,9 +1288,9 @@ class Winlink_Checkins
 
                                 if (checkinItems.Length >= 6)
                                 {
-                                    string countries = "COL,AFG,ALA,ALB,DZA,ASM,AND,AGO,AIA,ATA,ATG,ARG,ARM,ABW,AUS,AUT,AZE,BHS,BHR,BGD,BRB,BLR,BEL,BLZ,BEN,BMU,BTN,BOL,BIH,BWA,BVT,BRA,IOT,VGB,BRN,BGR,BFA,BDI,KHM,CMR,CAN,CPV,BES,CYM,CAF,TCD,CHL,CHN,CXR,CCK,COL,COM,COK,CRI,HRV,CUB,CUW,CYP,CZE,COD,DNK,DJI,DMA,DOM,TLS,ECU,EGY,SLV,GNQ,ERI,EST,SWZ,ETH,FLK,FRO,FSM,FJI,FIN,FRA,GUF,PYF,ATF,GAB,GMB,GEO,DEU,GHA,GIB,GRC,GRL,GRD,GLP,GUM,GTM,GGY,GIN,GNB,GUY,HTI,HMD,HND,HKG,HUN,ISL,IND,IDN,IRN,IRQ,IRL,IMN,ISR,ITA,CIV,JAM,JPN,JEY,JOR,KAZ,KEN,KIR,XXK,KWT,KGZ,LAO,LVA,LBN,LSO,LBR,LBY,LIE,LTU,LUX,MAC,MDG,MWI,MYS,MDV,MLI,MLT,MHL,MTQ,MRT,MUS,MYT,MEX,MDA,MNG,MNE,MSR,MAR,MOZ,MMR,NAM,NRU,NPL,NLD,NCL,NZL,NIC,NER,NGA,NIU,NFK,PRK,MKD,MNP,NOR,OMN,PAK,PLW,PSE,PAN,PNG,PRY,PER,PHL,PCN,POL,PRT,MCO,PRI,QAT,COG,REU,ROU,RUS,RWA,BLM,SHN,KNA,LCA,MAF,SPM,VCT,WSM,SMR,STP,SAU,SEN,SRB,SYC,SLE,SGP,SXM,SVK,SVN,SLB,SOM,ZAF,SGS,KOR,SSD,ESP,LKA,SDN,SUR,SJM,SWE,CHE,SYR,TWN,TJK,TZA,THA,TGO,TKL,TON,TTO,TUN,TUR,TKM,TCA,TUV,UGA,UKR,ARE,GBR,UMI,USA,URY,UZB,VUT,VAT,VEN,VNM,VIR,WLF,ESH,YEM,ZMB,ZWE,";
+                                    string countries = ",COL,AFG,ALA,ALB,DZA,ASM,AND,AGO,AIA,ATA,ATG,ARG,ARM,ABW,AUS,AUT,AZE,BHS,BHR,BGD,BRB,BLR,BEL,BLZ,BEN,BMU,BTN,BOL,BIH,BWA,BVT,BRA,IOT,VGB,BRN,BGR,BFA,BDI,KHM,CMR,CAN,CPV,BES,CYM,CAF,TCD,CHL,CHN,CXR,CCK,COL,COM,COK,CRI,HRV,CUB,CUW,CYP,CZE,COD,DNK,DJI,DMA,DOM,TLS,ECU,EGY,SLV,GNQ,ERI,EST,SWZ,ETH,FLK,FRO,FSM,FJI,FIN,FRA,GUF,PYF,ATF,GAB,GMB,GEO,DEU,GHA,GIB,GRC,GRL,GRD,GLP,GUM,GTM,GGY,GIN,GNB,GUY,HTI,HMD,HND,HKG,HUN,ISL,IND,IDN,IRN,IRQ,IRL,IMN,ISR,ITA,CIV,JAM,JPN,JEY,JOR,KAZ,KEN,KIR,XXK,KWT,KGZ,LAO,LVA,LBN,LSO,LBR,LBY,LIE,LTU,LUX,MAC,MDG,MWI,MYS,MDV,MLI,MLT,MHL,MTQ,MRT,MUS,MYT,MEX,MDA,MNG,MNE,MSR,MAR,MOZ,MMR,NAM,NRU,NPL,NLD,NCL,NZL,NIC,NER,NGA,NIU,NFK,PRK,MKD,MNP,NOR,OMN,PAK,PLW,PSE,PAN,PNG,PRY,PER,PHL,PCN,POL,PRT,MCO,PRI,QAT,COG,REU,ROU,RUS,RWA,BLM,SHN,KNA,LCA,MAF,SPM,VCT,WSM,SMR,STP,SAU,SEN,SRB,SYC,SLE,SGP,SXM,SVK,SVN,SLB,SOM,ZAF,SGS,KOR,SSD,ESP,LKA,SDN,SUR,SJM,SWE,CHE,SYR,TWN,TJK,TZA,THA,TGO,TKL,TON,TTO,TUN,TUR,TKM,TCA,TUV,UGA,UKR,ARE,GBR,UMI,USA,URY,UZB,VUT,VAT,VEN,VNM,VIR,WLF,ESH,YEM,ZMB,ZWE,";
                                     checkinCountry = isValidField (checkinItems [5].Trim ().Trim (','), countries);
-                                    countries = "COLOMBIA,BELGIUM,PHILIPPINES,TRINIDAD,GERMANY,ENGLAND,NORWAY,NEW ZEALAND,ST LUCIA,VENEZUELA,AUSTRIA,ROMANIA,CANADA,SERBIA";
+                                    countries = ",COLOMBIA,BELGIUM,PHILIPPINES,TRINIDAD,GERMANY,ENGLAND,NORWAY,NEW ZEALAND,ST LUCIA,VENEZUELA,AUSTRIA,ROMANIA,CANADA,SERBIA,";
                                     checkinCountryLong = isValidField (checkinItems [5].Trim (), countries);
                                     // if (checkinCountry.Length != 3) checkinCountry =  "";
 
@@ -1306,8 +1374,10 @@ class Winlink_Checkins
                                     }
                                     switch (checkinCountry)
                                     {
+                                        // for isValidField, the leading and trailing commas are needed to all precise matching and eliminate false positives
+                                        // ie, if the data contains US, it matches against USA while it is not valid
                                         case "AUT":  // Austria AUT
-                                            states = "B,K,N,S,ST,T,O,W,V";
+                                            states = ",B,K,N,S,ST,T,O,W,V,";
                                             checkinState = isValidField (checkinState, states);
                                             if (checkinState == "")
                                             {
@@ -1319,7 +1389,7 @@ class Winlink_Checkins
                                         case "BEL": // Belgium BEL
                                             break;
                                         case "CAN": // Canada CAN
-                                            states = "NL,PE,NS,NB,QC,ON,MB,SK,AB,BC,YT,NT,NU";
+                                            states = ",NL,PE,NS,NB,QC,ON,MB,SK,AB,BC,YT,NT,NU,";
                                             checkinState = isValidField (checkinState, states);
                                             if (checkinState == "")
                                             {
@@ -1329,7 +1399,7 @@ class Winlink_Checkins
                                             }
                                             break;
                                         case "DEU": // Deutschland - Germany DEU
-                                            states = "BW,BY,BE,BB,HB,HH,HE,MV,NI,NW,RP,SL,SN,ST,SH,TH";
+                                            states = ",BW,BY,BE,BB,HB,HH,HE,MV,NI,NW,RP,SL,SN,ST,SH,TH,";
                                             if (checkinState == "")
                                             {
                                                 isPerfect = false;
@@ -1340,7 +1410,7 @@ class Winlink_Checkins
                                             break;
                                         case "GBR":
                                         case "UK": // United Kingdom UK Great Britain GBR
-                                                   // states = "ABE,ABD,ANS,AGB,CLK,DGY,DND,EAY,EDU,ELN,ERW,EDH,ELS,FAL,FIF,GLG,HLD,IVC,MLN,MRY,NAY,NLK,ORK,PKN,RFW,SCB,ZET,SAY,SLK,STG,WDU,WLN,";
+                                                   // states = ",ABE,ABD,ANS,AGB,CLK,DGY,DND,EAY,EDU,ELN,ERW,EDH,ELS,FAL,FIF,GLG,HLD,IVC,MLN,MRY,NAY,NLK,ORK,PKN,RFW,SCB,ZET,SAY,SLK,STG,WDU,WLN,";
                                                    // if (checkinState == "")
                                                    // {
                                                    // isPerfect = false;
@@ -1349,7 +1419,7 @@ class Winlink_Checkins
                                                    // }
                                             break;
                                         case "NZL": // New Zealand NZL
-                                            states = "AUK,BOP,CAN,GIS,WGN,HKB,MWT,MWT,MBH,NSN,NTL,OTA,STL,TKI,TKI,TAS,HKB,WGN,WTC,STL,GIS,NTL,TAS,BOP,AUK,WKO,WKO,CAN,WTC,NSN,OTA,";
+                                            states = ",AUK,BOP,CAN,GIS,WGN,HKB,MWT,MWT,MBH,NSN,NTL,OTA,STL,TKI,TKI,TAS,HKB,WGN,WTC,STL,GIS,NTL,TAS,BOP,AUK,WKO,WKO,CAN,WTC,NSN,OTA,";
                                             if (checkinState == "")
                                             {
                                                 isPerfect = false;
@@ -1360,7 +1430,7 @@ class Winlink_Checkins
                                         case "NOR": // Norway NOR
                                             break;
                                         case "PHL": // Philippines PHL
-                                            states = "ABR,AGN,AGS,AKL,ALB,ANT,APA,AUR,BAN,BAS,BEN,BIL,BOH,BTG,BTN,BUK,BUL,CAG,CAM,CAN,CAP,CAS,CAT,CAV,CEB,COM,DAO,DAS,DAV,DIN,DVO,EAS,GUI,IFU,ILI,ILN,ILS,ISA,KAL,LAG,LAN,LAS,LEY,LUN,MAD,MAS,MDC,MDR,MGN,MGS,MOU,MSC,MSR,NCO,NCR,NEC,NER,NSA,NUE,NUV,PAM,PAN,PLW,QUE,QUI,RIZ,ROM,SAR,SCO,SIG,SLE,SLU,SOR,SUK,SUN,SUR,TAR,TAW,WSA,ZAN,ZAS,ZMB,ZSI";
+                                            states = ",ABR,AGN,AGS,AKL,ALB,ANT,APA,AUR,BAN,BAS,BEN,BIL,BOH,BTG,BTN,BUK,BUL,CAG,CAM,CAN,CAP,CAS,CAT,CAV,CEB,COM,DAO,DAS,DAV,DIN,DVO,EAS,GUI,IFU,ILI,ILN,ILS,ISA,KAL,LAG,LAN,LAS,LEY,LUN,MAD,MAS,MDC,MDR,MGN,MGS,MOU,MSC,MSR,NCO,NCR,NEC,NER,NSA,NUE,NUV,PAM,PAN,PLW,QUE,QUI,RIZ,ROM,SAR,SCO,SIG,SLE,SLU,SOR,SUK,SUN,SUR,TAR,TAW,WSA,ZAN,ZAS,ZMB,ZSI,";
                                             if (checkinState == "")
                                             {
                                                 isPerfect = false;
@@ -1369,7 +1439,7 @@ class Winlink_Checkins
                                             }
                                             break;
                                         case "ROU": // Romania ROU 
-                                                    // states = "AB,AG,AR,B,BC,BH,BN,BR,BT,BV,BZ,CJ,CL,CS,CT,CV,DB,DJ,GJ,GL,GR,HD,HR,IF,IL,IS,MH,MM,MS,NT,OT,PH,SB,SJ,SM,SV,TL,TM,TR,VL,VN,VS,";
+                                                    // states = ",AB,AG,AR,B,BC,BH,BN,BR,BT,BV,BZ,CJ,CL,CS,CT,CV,DB,DJ,GJ,GL,GR,HD,HR,IF,IL,IS,MH,MM,MS,NT,OT,PH,SB,SJ,SM,SV,TL,TM,TR,VL,VN,VS,";
                                             break;
                                         case "SRB": // Serbia SRB
                                             break;
@@ -1378,7 +1448,7 @@ class Winlink_Checkins
                                         case "TTO": // Trinidad & Tobago TTO
                                             break;
                                         case "USA": // United States of America USA
-                                            states = "AK,AL,AR,AS,AZ,CA,CO,CT,DC,DE,FL,GA,GU,HI,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MP,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,PR,RI,SC,SD,TN,TX,UM,UT,VA,VI,VT,WA,WI,WV,WY";
+                                            states = ",AK,AL,AR,AS,AZ,CA,CO,CT,DC,DE,FL,GA,GU,HI,IA,ID,IL,IN,KS,KY,LA,MA,MD,ME,MI,MN,MO,MP,MS,MT,NC,ND,NE,NH,NJ,NM,NV,NY,OH,OK,OR,PA,PR,RI,SC,SD,TN,TX,UM,UT,VA,VI,VT,WA,WI,WV,WY,";
                                             checkinState = isValidField (checkinState, states);
                                             if (checkinState == "")
                                             {
@@ -1389,7 +1459,7 @@ class Winlink_Checkins
                                             }
                                             break;
                                         case "VEN": // Venezuela VEN
-                                            states = "DC,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,R,S,T,U,V,W,X,Y,Z";
+                                            states = ",DC,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,R,S,T,U,V,W,X,Y,Z,";
                                             checkinState = isValidField (checkinState, states);
                                             if (checkinState == "")
                                             {
@@ -1459,7 +1529,7 @@ class Winlink_Checkins
                                     if (modeStr.Contains ("PACKET")) modeStr = "PACKET";
                                     modeStr = checkMode (modeStr, bandStr);
                                     string tempStr = "";
-                                    if (modeStr == "" )
+                                    if (modeStr == "")
                                     {
                                         isPerfect = false;
                                         score--;
@@ -2091,7 +2161,7 @@ class Winlink_Checkins
             {
                 // Console.WriteLine ("Google Update is turned off");
 
-                //    UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, spreadsheetId, endDate, ct); // ++++
+                // ++++
                 UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, removalString, spreadsheetId, endDate, ct);
             }
 
@@ -2738,6 +2808,7 @@ class Winlink_Checkins
             .Replace (":", "")
             .Replace (";", ",")
             .Replace ("<", "")
+            .Replace ("\\", "")
             .Replace (">", "")
             .Replace ("!", "|")
             .Trim ()
@@ -2757,7 +2828,8 @@ class Winlink_Checkins
                                 // .Replace ("\r\n", "") // some messages get a line wrap that messes things up
             .Trim ()
             .Trim (',')
-            .Trim ('|');
+            .Trim ('|')
+            .Trim (',');
         // len = msgField.Length;
         return (msgField);
     }

@@ -1,16 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>Winlink_Checkins</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Platforms>AnyCPU;x64</Platforms>
+    <Company>KB7WHO, Kenneth Burton</Company>
+    <Product>Winlink_Checkins</Product>
+    <AssemblyTitle>Winlink_Checkins</AssemblyTitle>
   </PropertyGroup>
-
   <ItemGroup>
     <PackageReference Include="Google.Apis.Sheets.v4" Version="1.69.0.3694" />
+    <PackageReference Include="System.Management" Version="7.0.2">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
   </ItemGroup>
-
 </Project>
