@@ -1139,11 +1139,12 @@ class Winlink_Checkins
                                 }
                             }
 
-                            if (newFormatEndOnly || newFormatStartOnly) reminderTxt = "\r\nYou are encouraged to use the new format with '##' at both the beginning and end of your checkin data";
-                            if (!newFormat) reminderTxt = "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data with '|' delimiters!";
-                            if (newFormatPipeOnly) reminderTxt = "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data";
-                            if (newFormatSingleOnly) reminderTxt = "\r\nIt appears that you tried to use the new format, but with a single '#'. You are encouraged to use the new format with '##' at both the beginning and end of your checkin data";
+                            if (newFormatEndOnly || newFormatStartOnly) reminderTxt += "\r\nYou are encouraged to use the new format with '##' at both the beginning and end of your checkin data";
+                            else if (!newFormat) reminderTxt += "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data with '|' delimiters!";
+                            else if (newFormatPipeOnly) reminderTxt += "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data";
+                            else if (newFormatSingleOnly) reminderTxt += "\r\nIt appears that you tried to use the new format, but with a single '#'. You are encouraged to use the new format with '##' at both the beginning and end of your checkin data";
                             if (newFormatNoPipe) reminderTxt += "\r\nYou are encouraged to use the '|' as the delimiter for your checkin data";
+                            if (newFormat && msgField.IndexOf (",") > -1) reminderTxt += "Using both ',' & '|' as delimiters in your checkin data doesn't work. If you intended to use the comma as part of the data, that does work.";
 
                             if (startPosition == -1)
                                 if (quotedPrintable > -1) startPosition = quotedPrintable;
@@ -1172,7 +1173,7 @@ class Winlink_Checkins
                             if (len > 0)
                             {
                                 checkinItems = getCheckinData (len, msgField, checkinItems, newFormat);
-                                checkIn = checkinItems [0].Trim ().Replace ("<", "").Replace (">", "");
+                                checkIn = checkinItems [0].Trim ().Trim (',').Replace ("<", "").Replace (">", "");
                                 // checkIn = checkIn.Trim();
                             }
                             else Console.WriteLine ("Message Field is empty in: " + messageID);
@@ -1198,7 +1199,7 @@ class Winlink_Checkins
                                     len = msgField.Length;
                                     checkinItems = new string [10];
                                     checkinItems = getCheckinData (len, msgField, checkinItems, newFormat);
-                                    checkIn = checkinItems [0].Trim ();
+                                    checkIn = checkinItems [0].Trim ().Trim (',');
                                     if (checkIn == fromTxt) brokenCheckin = false;
                                 }
                                 endPosition = checkIn.IndexOf ("/");
@@ -1282,7 +1283,7 @@ class Winlink_Checkins
                                     {
                                         isPerfect = false;
                                         score--;
-                                        reminderTxt2 = "\tminus 1 point, missing or invalid name in field 2 - " + checkinItems [1].Trim () + " 3\r\n";
+                                        reminderTxt2 = "\tminus 1 point, missing or invalid name in field 2 - " + checkinItems [1] + " \r\n";
                                     }
                                 }
 
@@ -1291,14 +1292,14 @@ class Winlink_Checkins
                                     string countries = ",COL,AFG,ALA,ALB,DZA,ASM,AND,AGO,AIA,ATA,ATG,ARG,ARM,ABW,AUS,AUT,AZE,BHS,BHR,BGD,BRB,BLR,BEL,BLZ,BEN,BMU,BTN,BOL,BIH,BWA,BVT,BRA,IOT,VGB,BRN,BGR,BFA,BDI,KHM,CMR,CAN,CPV,BES,CYM,CAF,TCD,CHL,CHN,CXR,CCK,COL,COM,COK,CRI,HRV,CUB,CUW,CYP,CZE,COD,DNK,DJI,DMA,DOM,TLS,ECU,EGY,SLV,GNQ,ERI,EST,SWZ,ETH,FLK,FRO,FSM,FJI,FIN,FRA,GUF,PYF,ATF,GAB,GMB,GEO,DEU,GHA,GIB,GRC,GRL,GRD,GLP,GUM,GTM,GGY,GIN,GNB,GUY,HTI,HMD,HND,HKG,HUN,ISL,IND,IDN,IRN,IRQ,IRL,IMN,ISR,ITA,CIV,JAM,JPN,JEY,JOR,KAZ,KEN,KIR,XXK,KWT,KGZ,LAO,LVA,LBN,LSO,LBR,LBY,LIE,LTU,LUX,MAC,MDG,MWI,MYS,MDV,MLI,MLT,MHL,MTQ,MRT,MUS,MYT,MEX,MDA,MNG,MNE,MSR,MAR,MOZ,MMR,NAM,NRU,NPL,NLD,NCL,NZL,NIC,NER,NGA,NIU,NFK,PRK,MKD,MNP,NOR,OMN,PAK,PLW,PSE,PAN,PNG,PRY,PER,PHL,PCN,POL,PRT,MCO,PRI,QAT,COG,REU,ROU,RUS,RWA,BLM,SHN,KNA,LCA,MAF,SPM,VCT,WSM,SMR,STP,SAU,SEN,SRB,SYC,SLE,SGP,SXM,SVK,SVN,SLB,SOM,ZAF,SGS,KOR,SSD,ESP,LKA,SDN,SUR,SJM,SWE,CHE,SYR,TWN,TJK,TZA,THA,TGO,TKL,TON,TTO,TUN,TUR,TKM,TCA,TUV,UGA,UKR,ARE,GBR,UMI,USA,URY,UZB,VUT,VAT,VEN,VNM,VIR,WLF,ESH,YEM,ZMB,ZWE,";
                                     checkinCountry = isValidField (checkinItems [5].Trim ().Trim (','), countries);
                                     countries = ",COLOMBIA,BELGIUM,PHILIPPINES,TRINIDAD,GERMANY,ENGLAND,NORWAY,NEW ZEALAND,ST LUCIA,VENEZUELA,AUSTRIA,ROMANIA,CANADA,SERBIA,";
-                                    checkinCountryLong = isValidField (checkinItems [5].Trim (), countries);
+                                    checkinCountryLong = isValidField (checkinItems [5].Trim ().Trim (','), countries);
                                     // if (checkinCountry.Length != 3) checkinCountry =  "";
 
                                     if (checkinCountry == "")
                                     {
                                         isPerfect = false;
                                         score--;
-                                        pointsOff += "\tminus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - " + checkinItems [5].Trim () + ", try USA, PHL, DEU, COL, VEN, CAN, AUS, AUT, TTO, NZL, BEL, NOR, ROU, SRB, LCA, etc";
+                                        pointsOff += "\tminus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - " + checkinItems [5] + ", try USA, PHL, DEU, COL, VEN, CAN, AUS, AUT, TTO, NZL, BEL, NOR, ROU, SRB, LCA, etc";
 
                                     }
                                 }
@@ -1481,7 +1482,7 @@ class Winlink_Checkins
 
                                     if (scoreState > 0)
                                     {
-                                        pointsOff += "\tminus 1 point, " + tempStr + "in field 5 -  " + checkinItems [4].Trim () + tempStr2 + "\r\n";
+                                        pointsOff += "\tminus 1 point, " + tempStr + "in field 5 -  " + checkinItems [4] + tempStr2 + "\r\n";
                                         score--;
                                     }
 
@@ -1504,20 +1505,20 @@ class Winlink_Checkins
                                         {
                                             isPerfect = false;
                                             score--;
-                                            pointsOff += "\tminus 1 point, missing or invalid city in field 3 " + checkinItems [2].Trim () + "\r\n";
+                                            pointsOff += "\tminus 1 point, missing or invalid city in field 3 " + checkinItems [2] + "\r\n";
                                         }
                                     }
 
                                 }
                                 if (checkinItems.Length >= 7)
                                 {
-                                    bandStr = checkinItems [6].Trim ();
+                                    bandStr = checkinItems [6].Trim ().Trim (',');
                                     bandStr = checkBand (bandStr);
                                     if (bandStr == "")
                                     {
                                         isPerfect = false;
                                         score--;
-                                        pointsOff += "\tminus 1 point, missing or invalid band in field 7 - " + checkinItems [6].Trim () + ", try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.\r\n";
+                                        pointsOff += "\tminus 1 point, missing or invalid band in field 7 - " + checkinItems [6] + ", try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.\r\n";
                                         if (msgField.IndexOf ("AREDN") > -1) pointsOff += "\tAREDN is a project, not a valid band. Try \"5CM, 9CM, 13CM, 33CM, or SHF.\"\r\n";
 
                                     }
@@ -1525,7 +1526,7 @@ class Winlink_Checkins
                                 }
                                 if (checkinItems.Length >= 8)
                                 {
-                                    modeStr = checkinItems [7].Trim ();
+                                    modeStr = checkinItems [7].Trim ().Trim (',');
                                     if (modeStr.Contains ("PACKET")) modeStr = "PACKET";
                                     modeStr = checkMode (modeStr, bandStr);
                                     string tempStr = "";
@@ -1535,7 +1536,7 @@ class Winlink_Checkins
                                         score--;
                                         // if (bandStr == "VHF" || bandStr == "UHF") tempStr = ", try \"VARA FM\" or \"PACKET\"";
                                         if (bandStr == "TELNET") tempStr = ", try SMTP";
-                                        pointsOff += "\tminus 1 point, missing or invalid mode in field 8 - " + checkinItems [7].Trim () + tempStr + ", try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)\r\n";
+                                        pointsOff += "\tminus 1 point, missing or invalid mode in field 8 - " + checkinItems [7] + tempStr + ", try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)\r\n";
                                         if (msgField.IndexOf ("AREDN") > -1) pointsOff += "\tAREDN is a project, not a valid mode. Try \"MESH\"\r\n";
                                     }
                                 }
@@ -1784,7 +1785,10 @@ class Winlink_Checkins
                                     if (msgField.IndexOf ("VHF") > -1) { bandStr = "VHF"; }
                                     if (msgField.IndexOf ("UHF") > -1) { bandStr = "UHF"; }
                                 }
-                                if (msgField.IndexOf ("VARAHF") > -1) { bandStr = "HF"; modeStr = "VARA HF"; }
+                                // if (msgField.IndexOf ("VARAHF") > -1) { bandStr = "HF"; modeStr = "VARA HF"; }
+                                if (msgField.IndexOf ("VARAHF") > -1) { 
+                                    if (bandStr == "") bandStr = "HF"; 
+                                    modeStr = "VARA HF"; }
                                 // if (bandStr != "") { bandCt++; }
 
                                 bandStr = checkBand (bandStr);
@@ -3069,7 +3073,7 @@ class Winlink_Checkins
             }
             else
             {
-                Console.WriteLine ("No new check-ins provided; skipped yearly tab insertion.");
+                Console.WriteLine ("No new check-ins this week; skipped the New and Yearly tab insertions.");
             }
         }
         catch (Exception ex)
