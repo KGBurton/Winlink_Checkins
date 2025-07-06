@@ -948,7 +948,7 @@ class Winlink_Checkins
                                 // check to see that it really is the start of the data
                                 // if the "|" precedes the "##" it was put only at the end
                                 firstPipe = fileText.IndexOf ("|", quotedPrintable);
-                                if (firstPipe > -1) lineStart = fileText.IndexOf ("\r\n", firstPipe);
+                                if (firstPipe > -1) lineStart = fileText.LastIndexOf ("\r\n", firstPipe)+2;
                                 
                                 if (startPosition > -1 && endPosition == -1) // only one ## marker
                                 {
@@ -957,8 +957,8 @@ class Winlink_Checkins
                                     if (fromTxt != null && firstPipe > -1) temp = fileText.LastIndexOf (fromTxt, firstPipe);
                                     else
                                     {
-                                        endPosition = fileText.IndexOf ("\r\n", startPosition);
-                                        len = endPosition - startPosition;
+                                        endPosition = fileText.IndexOf ("\r\n", startPosition+2);
+                                        len = endPosition - (startPosition+2);
                                         if (len > 0) temp = fileText.IndexOf (",", startPosition,len);
                                     }
                                     if (temp > -1 && temp < startPosition) // assume ## is the end marker instead of the beginning
@@ -967,6 +967,7 @@ class Winlink_Checkins
                                         endPosition = startPosition;
                                         if (firstPipe > -1) startPosition = temp; // move the startPosition where the preceding callsign was found
                                         // if (fromTxt != null) startPosition = fileText.LastIndexOf (fromTxt, startPosition); // move the startPosition to the previous location of the callsign preceding the first pipe
+                                        else if (fromTxt != null) startPosition = fileText.IndexOf (fromTxt, endHeader);
                                         else startPosition = endHeader;
 
                                     }
@@ -1956,6 +1957,7 @@ class Winlink_Checkins
                                         .Replace (".", "")
                                         .Replace (" ", "")
                                         .Replace (" METERS", "M")
+                                        .Replace (" MTERS", "M")
                                         .Replace (" METER", "M")
                                         .Replace ("METERS", "M")
                                         .Replace ("METER", "M")
@@ -2076,6 +2078,7 @@ class Winlink_Checkins
                                     .Replace ("(", "")
                                     .Replace (".", "")
                                     .Replace ("TELNET", "SMTP")
+                                    .Replace ("SMPT", "SMTP")
                                     .Replace ("ARDOP HF", "ARDOP")
                                     .Replace ("VARA VHF", "VARA FM")
                                     .Replace ("VHF VARA", "VARA FM")
@@ -2470,6 +2473,7 @@ class Winlink_Checkins
                 // ++++
                 if (newCheckIns != null)
                 {
+                    // Console.WriteLine ("Google Update is turned off"); 
                     UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, removalString, spreadsheetId, endDate, credentialFilename, ct);
                     //StringBuilder netCheckinString, StringBuilder netAckString2, StringBuilder newCheckins, StringBuilder removalString, string spreadsheetId, DateTime endDate, string credentialFilename, int checkinCount
                 }
@@ -3219,7 +3223,16 @@ class Winlink_Checkins
 
     public static string? [] getCheckinData (int len, string? msgField, string? []? checkinItems, bool newFormat)
     {
-        string? checkIn = msgField;
+        string? checkIn;
+        if (msgField != null)
+        {
+            checkIn = msgField.Replace ("(", "").Replace (")", "");
+        }
+        else
+        {
+            Console.WriteLine ("msgField is null, returning empty array.");
+            return new string [] { };
+        }
         if (checkIn != null)
         {
             if (checkIn.IndexOf ("\r\n") != -1) len = checkIn.IndexOf ("\r\n");
