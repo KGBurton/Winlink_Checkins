@@ -1,5 +1,4 @@
-﻿
-//c# code that will input start date, end date, and callSign and will select files with an extension of mime from the current folder  based on start date and end date, and will read each file to find a line labeled To: . If the rest of the line contains callSign, then write the data from the line labeled X-Source: to a text file called checkins.txt in the same folder
+﻿//c# code that will input start date, end date, and callSign and will select files with an extension of mime from the current folder  based on start date and end date, and will read each file to find a line labeled To: . If the rest of the line contains callSign, then write the data from the line labeled X-Source: to a text file called checkins.txt in the same folder
 // Design Get the date range
 // get the data source
 // is it a message file? (.mime)
@@ -186,6 +185,7 @@ class Winlink_Checkins
         string newCheckIn = "";
         string base64String = "";
         string attachmentDecodedString = string.Empty;
+        string modeTypo = "";
 
         // string w3wText = "";
 
@@ -249,6 +249,8 @@ class Winlink_Checkins
         int ICS204Ct = 0;
         int ICS205Ct = 0;
         int ICS205aCt = 0;
+        int ICS206Ct = 0;
+
         int exerciseCompleteCt = 0;
         int radioGram = 0;
         int radioGramCt = 0;
@@ -560,7 +562,7 @@ class Winlink_Checkins
                     tempFromTxt = isValidCallsign (fromTxt);
                     if (tempFromTxt == "")
                     {
-                        Console.WriteLine ("0506 Invalid callsign =>" + fromTxt + "<= in FROM: field of " + messageID);
+                        Console.WriteLine ("562 Invalid callsign in the From: field =>" + fromTxt + "<= of messageID" + messageID);
                     }
                     else fromTxt = tempFromTxt;
 
@@ -591,6 +593,8 @@ class Winlink_Checkins
 
                     // check for ICS 213 msg
                     var ics = fileText.IndexOf ("TEMPLATE VERSION: ICS 213");
+                    if (ics > -1)  icsCt++; 
+
 
                     // check for winlink checkin message
                     var winlinkCkin = fileText.IndexOf ("MAP FILE NAME: WINLINK CHECK", endHeader);
@@ -599,6 +603,7 @@ class Winlink_Checkins
                     if (winlinkCkin < 0) winlinkCkin = fileText.IndexOf ("WINLINK CHECK-IN 5.0", endHeader);
                     if (winlinkCkin < 0) winlinkCkin = fileText.IndexOf ("WINLINK CHECK-IN \r\n0. HEADER", endHeader);
                     if (winlinkCkin < 0) winlinkCkin = fileText.IndexOf ("WINLINK CHECK IN 2.", endHeader);
+                    if (winlinkCkin > -1)  winlinkCkinCt++; 
 
                     // is this a Position Report? For position reports, the valid message will be a fowarded 
                     // response from SERVICE with Latitude: Longitude: and Comment:
@@ -735,12 +740,15 @@ class Winlink_Checkins
 
                     // check for local weather report
                     var localWeather = fileText.IndexOf ("CURRENT LOCAL WEATHER CONDITIONS");
+                    if (localWeather > -1)  localWeatherCt++; 
 
                     // check for severe weather
                     var severeWeather = fileText.IndexOf ("SEVERE WX REPORT");
+                    if (severeWeather > -1)  severeWeatherCt++; 
 
                     // check incident status report
                     var incidentStatus = fileText.IndexOf ("INCIDENT STATUS");
+                    if (incidentStatus > -1)  incidentStatusCt++; 
 
                     // check for odd checkin message - don't let it scan through to a binary attachment!
                     //var lenBPQ = fileText.Length - 10;
@@ -754,39 +762,51 @@ class Winlink_Checkins
 
                     // check for damage assessment report
                     var damAssess = fileText.IndexOf ("SURVEY REPORT - CATEGORIES");
+                    if (damAssess > -1)  damAssessCt++; 
 
                     // check for field situation report
                     var fieldSit = fileText.IndexOf ("EMERGENT/LIFE SAFETY");
+                    if (fieldSit > -1)  fieldSitCt++; 
 
                     // check for Quick Health & Welfare report, doesn't exist anymore? 10/2024
                     var quickM = fileText.IndexOf ("\r\nFROM ", endHeader);
+                    if (quickM > -1)  quickMCt++; 
 
                     // check for RRI Quick Welfare Message
                     var qwm = fileText.IndexOf ("TEMPLATE VERSION: QUICK WELFARE MESSAGE");
-
+                    if (qwm > -1)  qwmCt++; 
+                    
                     // check for RRI Welfare Radiogram
                     var rriWR = fileText.IndexOf ("TEMPLATE VERSION: RRI WELFARE RADIOGRAM");
-
+                    if (rriWR > -1)  rriCt++; 
+                   
                     // check for Did You Feel It report
                     var dyfi = fileText.IndexOf ("DYFI WINLINK");
-
+                    if (dyfi > -1)  dyfiCt++; 
+                    
                     // check for Medical Incident Report
                     var mi = fileText.IndexOf ("INITIAL PATIENT ASSESSMENT");
+                    if (mi > -1)  miCt++; 
 
                     // check for ICS-201
                     var ICS201 = fileText.IndexOf ("ICS 201 INCIDENT BRIEFING");
+                    if (ICS201 > -1) ICS201Ct++;
 
                     // check for ICS-202
                     var ICS202 = fileText.IndexOf ("ICS202_INCIDENT_OBJECTIVES");
+                    if (ICS202 > -1) ICS202Ct++;
 
                     // check for ICS-203
                     var ICS203 = fileText.IndexOf ("ICS 203 ORGANIZATIONAL ASSIGNMENTS");
+                    if (ICS203 > -1) ICS203Ct++;
 
                     // check for ICS-204
                     var ICS204 = fileText.IndexOf ("ICS 204 ASSIGNMENT LIST");
+                    if (ICS204 > -1) ICS204Ct++;
 
-                    // check for ICS-204
+                    // check for ICS-205
                     var ICS205 = fileText.IndexOf ("ICS 205");
+                    if (ICS205 > -1) ICS205Ct++;
 
                     // check for ICS-205a
                     var ICS205a = fileText.IndexOf ("ICS 205A");
@@ -797,10 +817,13 @@ class Winlink_Checkins
                         fileText = fileText.Replace ("\r\nMETHOD:", "", StringComparison.OrdinalIgnoreCase);
                         // fileText = fileText.Replace ("NAME: ", "", StringComparison.OrdinalIgnoreCase);
                         // fileTextOriginal.Replace ("\r\nASSIGNMENT:   NAME:  =20\r\nMETHOD:=20", "");
-
+                        ICS205aCt++;
                     }
 
-
+                    // check for ICS-206
+                    var ICS206 = fileText.IndexOf ("ICS 206");
+                    if (ICS206 > -1) ICS206Ct++;
+                   
                     // check for WhatThreeWords
                     if (fileText.IndexOf ("///") > -1 || fileText.IndexOf ("W3W") > -1 || fileText.IndexOf ("WHAT 3 WORDS") > -1 || fileText.IndexOf ("WHAT3WORDS") > -1 || fileText.IndexOf ("WHATTHREEWORDS") > -1 || fileText.IndexOf ("UTMREF") > -1)
                     {
@@ -823,15 +846,15 @@ class Winlink_Checkins
                         removalString.AppendLine (fromTxt + "\tin " + messageID + " was a removal request.");
                         removalCt++;
                         // Remove callsign from roster (string)
-                        if (roster.Contains ($";{fromTxt};"))
+                        if (!string.IsNullOrEmpty (roster) && roster.Contains ($";{fromTxt};"))
                         {
                             roster = roster.Replace ($";{fromTxt};", ";"); // middle of the string
                         }
-                        else if (roster.StartsWith ($"{fromTxt};"))
+                        else if (!string.IsNullOrEmpty (roster) && roster.StartsWith ($"{fromTxt};"))
                         {
                             roster = roster.Replace ($"{fromTxt};", ""); // beginning of the string
                         }
-                        else if (roster.EndsWith ($";{fromTxt}"))
+                        else if (!string.IsNullOrEmpty (roster) && roster.EndsWith ($";{fromTxt}"))
                         {
                             roster = roster.Replace ($";{fromTxt}", ""); // end of the string
                         }
@@ -948,8 +971,8 @@ class Winlink_Checkins
                                 // check to see that it really is the start of the data
                                 // if the "|" precedes the "##" it was put only at the end
                                 firstPipe = fileText.IndexOf ("|", quotedPrintable);
-                                if (firstPipe > -1) lineStart = fileText.LastIndexOf ("\r\n", firstPipe)+2;
-                                
+                                if (firstPipe > -1) lineStart = fileText.LastIndexOf ("\r\n", firstPipe) + 2;
+
                                 if (startPosition > -1 && endPosition == -1) // only one ## marker
                                 {
                                     onlyOneMarker = true;
@@ -957,9 +980,9 @@ class Winlink_Checkins
                                     if (fromTxt != null && firstPipe > -1) temp = fileText.LastIndexOf (fromTxt, firstPipe);
                                     else
                                     {
-                                        endPosition = fileText.IndexOf ("\r\n", startPosition+2);
-                                        len = endPosition - (startPosition+2);
-                                        if (len > 0) temp = fileText.IndexOf (",", startPosition,len);
+                                        endPosition = fileText.IndexOf ("\r\n", startPosition + 2);
+                                        len = endPosition - (startPosition + 2);
+                                        if (len > 0) temp = fileText.IndexOf (",", startPosition, len);
                                     }
                                     if (temp > -1 && temp < startPosition) // assume ## is the end marker instead of the beginning
                                     {
@@ -995,7 +1018,7 @@ class Winlink_Checkins
                                 // if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition); // if there is only a beginning marker, set the end position to the next return
                                 if (endPosition == -1) endPosition = lastBoundary; // if there is only a beginning marker, set the end position to the last boundary
                                                                                    // if (endPosition <= startPosition) startPosition = fileText.IndexOf ("|", endHeader); //
-                                if (newFormatEndOnly)
+                                if (newFormatEndOnly || newFormatStartOnly)
                                 {
                                     if (fileText.IndexOf ("|", endHeader) > -1) startPosition = fileText.LastIndexOf ("\r\n", endPosition) + 2; // backup to after the preceding return if there is a pipe after the header
                                     else newFormatNoPipe = true;
@@ -1005,7 +1028,7 @@ class Winlink_Checkins
                             if (!onlyOneMarker && !newFormat && fileText.IndexOf ("|") > -1) newFormatPipeOnly = true; // no ## markers, but pipe delimiters are present
                             // if (!onlyOneMarker && !newFormat && (newFormatEndOnly || newFormatStartOnly) && fileText.IndexOf ("#") > -1 && fileText.IndexOf ("|") > -1) // new format almost but only one # for delimiter,
                             if (!newFormat && !newFormatEndOnly && !newFormatStartOnly && fileText.IndexOf ("#") > -1 && fileText.IndexOf ("|") > -1) // new format almost but only one # for delimiter,
-                                                                                                                                                                        // hoping that the combo is unique enough
+                                                                                                                                                      // hoping that the combo is unique enough
                             {
                                 newFormatSingleOnly = true;
                                 startPosition = firstPipe; // set start to first pipe
@@ -1186,12 +1209,6 @@ class Winlink_Checkins
                                     startPosition = fileText.IndexOf ("\r\n", startPosition) + 2;
                                     endPosition = fileText.IndexOf ("8. COMMUNICATIONS", startPosition) - 1;
                                 }
-
-                                else if (ICS205a > -1)
-                                {
-                                    ICS205aCt++;
-                                }
-
                                 else if ((PosReport || copyPR > -1) && !newFormat)
                                 {
                                     //if (copyPR == 0) reminderTxt += "No checkin information/Comment: tag in the message";
@@ -1299,7 +1316,7 @@ class Winlink_Checkins
                                         if (startPosition > -1) { startPosition += 4; }
                                     }
                                     //endPosition = fileText.IndexOf ("--BOUNDARY", startPosition) - 1;
-                                    if (!newFormat) endPosition = lastBoundary;
+                                    if (!newFormat && !newFormatStartOnly) endPosition = lastBoundary;
                                 }
                             }
 
@@ -1346,7 +1363,7 @@ class Winlink_Checkins
                                 {
                                     checkIn = null; // Explicitly set to null
                                     string safeMessageID = messageID ?? "";
-                                    Console.WriteLine ("1319 Invalid checkin data in messageID: " + safeMessageID);
+                                    Console.WriteLine ("1348 Invalid checkin data in messageID: " + safeMessageID);
                                 }
                                 // checkIn = checkIn?.Trim() ?? "";
                             }
@@ -1392,8 +1409,10 @@ class Winlink_Checkins
 
                                     if (checkIn == fromTxt) brokenCheckin = false;
                                 }
-                                if ((checkIn == "" || checkIn != fromTxt) && fromTxt != "") checkIn = fromTxt;
-                                if (checkIn == "" && xSource != "") checkIn = xSource;
+                                // assume the from text is correct?
+                                //if ((checkIn == "" || checkIn != fromTxt) && fromTxt != "") checkIn = fromTxt;
+                                // assume the xSource is correct?
+                                // if (checkIn == "" && xSource != "") checkIn = xSource;
                                 if (checkIn != null) endPosition = checkIn.IndexOf ("/");
                                 if (checkIn != null && endPosition > -1) checkIn = checkIn.Substring (0, endPosition);
                                 if (brokenCheckin)
@@ -1406,12 +1425,12 @@ class Winlink_Checkins
                                     else if (tempCheckIn == "")
                                     {
                                         if (checkIn != null) callSignTypo = checkIn;
-                                        Console.WriteLine ("1364 checkIn from msgField " + msgField + " is null or invalid in :" + messageID);
-                                        // checkIn = fromTxt;
+                                        Console.WriteLine ("1408 checkIn from msgField " + msgField + " is null or invalid in :" + messageID);
+                                        if (checkIn == null) checkIn = fromTxt;
                                     }
                                 }
 
-                                // checkIn = isValidCallsign (checkIn);
+                                checkIn = isValidCallsign (checkIn);
                                 if (checkIn != "")
                                 {
                                     // checkIn = match.Value;
@@ -1710,12 +1729,18 @@ class Winlink_Checkins
 
                                 if (checkinItems != null && len >= 8)
                                 {
+                                    modeTypo = string.Empty;
                                     string? item7 = checkinItems [7];
                                     modeStr = item7 != null ? item7.Trim ().Trim (',') : "";
                                     if (modeStr != null && modeStr.Contains ("PACKET")) modeStr = "PACKET";
                                     if (modeStr != null && bandStr != null) // Explicit check for both arguments
                                     {
-                                        modeStr = checkMode (modeStr, bandStr) ?? "";
+                                        (modeStr, modeTypo, var empty) = checkMode (modeStr ?? string.Empty, bandStr ?? string.Empty, modeTypo ?? string.Empty);
+                                        if (modeTypo != string.Empty)
+                                        {
+                                            reminderTxt += modeTypo;
+                                            // checkinItems [7] = modeStr; keep the original for error reporting.
+                                        }
                                     }
                                     else
                                     {
@@ -1746,22 +1771,7 @@ class Winlink_Checkins
                                     dupCt++;
                                 }
                                 ct++;
-                                if (localWeather > -1) { localWeatherCt++; }
-                                if (severeWeather > -1) { severeWeatherCt++; }
-                                if (winlinkCkin > -1) { winlinkCkinCt++; }
-                                if (incidentStatus > -1) { incidentStatusCt++; }
-                                if (ics > -1) { icsCt++; }
-                                if (damAssess > -1) { damAssessCt++; }
-                                if (fieldSit > -1) { fieldSitCt++; }
-                                if (quickM > -1) { quickMCt++; }
-                                if (dyfi > -1) { dyfiCt++; }
-                                if (rriWR > -1) { rriCt++; }
-                                if (qwm > -1) { qwmCt++; }
-                                if (mi > -1) { miCt++; }
-                                if (ICS201 > -1) ICS201Ct++;
-                                if (ICS202 > -1) ICS202Ct++;
-                                if (ICS203 > -1) ICS203Ct++;
-                                if (ICS204 > -1) ICS204Ct++;
+                                                              
 
                                 testString = testString + checkIn + " | ";
                                 // the spreadsheet chokes if the string ends with "|" so
@@ -2068,7 +2078,7 @@ class Winlink_Checkins
                                     bandCt++;
                                 }
 
-                                modeStr = modeStr
+                                if (!string.IsNullOrEmpty (modeStr)) modeStr = modeStr
                                     .ToUpper ()
                                     .Trim ()
                                     .Replace ("WINLINK", "")
@@ -2078,7 +2088,7 @@ class Winlink_Checkins
                                     .Replace ("(", "")
                                     .Replace (".", "")
                                     .Replace ("TELNET", "SMTP")
-                                    .Replace ("SMPT", "SMTP")
+                                    // .Replace ("SMPT", "SMTP")
                                     .Replace ("ARDOP HF", "ARDOP")
                                     .Replace ("VARA VHF", "VARA FM")
                                     .Replace ("VHF VARA", "VARA FM")
@@ -2092,9 +2102,12 @@ class Winlink_Checkins
                                     .Replace ("VHF PACKET", "PACKET")
                                     .Replace ("TELNET", "SMTP")
                                     .Trim ();
-                                if (modeStr.IndexOf ("MESH") > -1) { modeStr = "MESH"; }
-                                if (modeStr.IndexOf ("VARA") > -1 && bandStr == "HF") { modeStr = "VARA HF"; }
-                                if (modeStr.IndexOf ("VARA") > -1 && (bandStr == "VHF" || bandStr == "UHF" || bandStr == "SHF" || bandStr == "2M" || bandStr == "70CM" || bandStr == "1.25M" || bandStr == "33CM" || bandStr == "23CM" || bandStr == "13CM" || bandStr == "5CM" || bandStr == "3CM")) { modeStr = "VARA FM"; }
+                                if (modeStr != null)
+                                {
+                                    if (modeStr.IndexOf ("MESH") > -1) { modeStr = "MESH"; }
+                                    if (modeStr.IndexOf ("VARA") > -1 && bandStr == "HF") { modeStr = "VARA HF"; }
+                                    if (modeStr.IndexOf ("VARA") > -1 && (bandStr == "VHF" || bandStr == "UHF" || bandStr == "SHF" || bandStr == "2M" || bandStr == "70CM" || bandStr == "1.25M" || bandStr == "33CM" || bandStr == "23CM" || bandStr == "13CM" || bandStr == "5CM" || bandStr == "3CM")) { modeStr = "VARA FM"; }
+                                }
                                 if (bandStr == "TELNET") { modeStr = "SMTP"; }
 
                                 if (modeStr != "")
@@ -2106,15 +2119,16 @@ class Winlink_Checkins
                                     }
 
                                 }
-                                // modeStr = checkMode (modeStr, bandStr);
-                                if (modeStr != null && bandStr != null)
-                                {
-                                    modeStr = checkMode (modeStr, bandStr) ?? ""; // Ensure checkMode doesn't return null
-                                }
-                                else
-                                {
-                                    modeStr = ""; // Fallback if either is null
-                                }
+                                // modeStr = checkMode (modeStr, bandStr); 20250722
+                                //if (modeStr != null && bandStr != null)
+                                //{
+                                //    (modeStr, modeTypo, bandStr) = checkMode (modeStr ?? string.Empty, bandStr ?? string.Empty, modeTypo ?? string.Empty);// Ensure checkMode doesn't return null
+                                //    if (modeTypo != null) reminderTxt += modeTypo;
+                                //}
+                                //else
+                                //{
+                                //    modeStr = ""; // Fallback if either is null
+                                //}
                                 if (modeStr == "SMTP") { bandStr = "TELNET"; }
                                 if (modeStr == "MESH") { meshCt++; }
                                 if (modeStr == "")
@@ -2178,8 +2192,8 @@ class Winlink_Checkins
 
                                 if (callSignTypo != "" && noScore == -1)
                                 {
-                                    reminderTxt += "\r\nCheck for a typo in your callsign in the checkin data: " + callSignTypo + " vs " + checkIn + "\r\n";
-                                    typoString.Append ("\t messageID " + messageID + " - " + checkIn + " vs " + callSignTypo + "\r\n\t\t" + msgField + "\r\n");
+                                    reminderTxt += "\r\nCheck for a typo in your callsign in the checkin data: " + callSignTypo + " vs From:" + tempFromTxt + "\r\n";
+                                    typoString.Append ("\t messageID " + messageID + " - " + checkIn + " vs " + tempFromTxt + "\r\n\t\t" + msgField + "\r\n");
                                     if (!newFormat) reminderTxt += "You may not have used the \"##\" marker at the beginning and end of your checkin data. See the examples.";
                                     if (isValidCallsign (callSignTypo) == "") reminderTxt += "You may have switched your call sign and name or left the call sign out";
 
@@ -2190,7 +2204,7 @@ class Winlink_Checkins
                                     if (isPerfect)
                                     {
                                         // reminderTxt += "\r\nThis is a copy of your extracted checkin data. \r\nMessage: \r\n" + msgField + "\r\n\r\nPerfect Message! Your score is 10.";
-                                        if (checkinItems != null) reminderTxt += "\r\nThis is a copy of your extracted checkin data: \r\n## " + String.Join (" | ", checkinItems) + " ##\r\n\r\nPerfect Message! Your score is 10.";
+                                        if (checkinItems != null) reminderTxt += "\r\nThis is a copy of your extracted checkin data (in the correct format): \r\n## " + String.Join (" | ", checkinItems) + " ##\r\n\r\nPerfect Message! Your score is 10.";
                                         perfectScoreCt++;
                                     }
                                     else
@@ -2206,11 +2220,11 @@ class Winlink_Checkins
                                         if (checkinItems != null)
                                         {
                                             var tmpMsgField = msgField;
-                                            if (newFormat) tmpMsgField = "## "+tmpMsgField +" ##";
-                                            if (onlyOneMarker && newFormatStartOnly) tmpMsgField = "## " + tmpMsgField ;
-                                            if (onlyOneMarker && newFormatEndOnly ) tmpMsgField = tmpMsgField + " ##";
+                                            if (newFormat) tmpMsgField = "## " + tmpMsgField + " ##";
+                                            if (onlyOneMarker && newFormatStartOnly) tmpMsgField = "## " + tmpMsgField;
+                                            if (onlyOneMarker && newFormatEndOnly) tmpMsgField = tmpMsgField + " ##";
 
-                                            reminderTxt += "\r\n" + "\r\nThis is a copy of your extracted checkin data. \r\nCheckin Data: ## " + String.Join (" | ", checkinItems) + " ##" +
+                                            reminderTxt += "\r\n" + "\r\nThis is a copy of your extracted checkin data (in the correct format). \r\nCheckin Data: ## " + String.Join (" | ", checkinItems) + " ##" +
                                                 "\r\nOriginal Message for comparison: " + tmpMsgField + "\r\n\r\n" +
                                                 "Your score is: " + score + "\r\n" + pointsOff +
                                                 "\r\nRecommended format reminder in the Comment/Message field:\r\ncallSign, firstname, city, county, state/province/region, country, band, Mode, grid\r\n" +
@@ -2468,21 +2482,19 @@ class Winlink_Checkins
             // string spreadsheetId = "1e0PJVqMGZhTzxwIVDf9if1dSSnG8y1U5Zf6pojB5Txc"; // Your new ID
             if (!string.IsNullOrWhiteSpace (spreadsheetId))
             {
-                // Console.WriteLine ("Google Update is turned off");
+                // Console.WriteLine ("\r\nGoogle Update is turned off\r\n");
 
                 // ++++
                 if (newCheckIns != null)
                 {
-                    // Console.WriteLine ("Google Update is turned off"); 
                     UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, removalString, spreadsheetId, endDate, credentialFilename, ct);
-                    //StringBuilder netCheckinString, StringBuilder netAckString2, StringBuilder newCheckins, StringBuilder removalString, string spreadsheetId, DateTime endDate, string credentialFilename, int checkinCount
                 }
             }
 
             xmlPerfDoc.Save (xmlPerfFile);
             xmlDoc.Save (xmlFile);
             // rewrite the roster.txt file
-            roster = SortCommaDelimitedString (roster, ";").Trim (';');
+            roster = SortCommaDelimitedString (roster ?? string.Empty, ";").Trim (';');
             rosterString = "netName=" + netName + "// This is the name of the winlink net to be processed and the slashes need to be there up against the net name\r\n"
                     + "callSign=" + xmlXsource + "// This is the callsign (yours) that will be used as the x-source for the XML messages to be imported. Without this, the messages cannot be edited in Winlink after importing\r\n"
                     + "google spreadsheet id=" + spreadsheetId + "// this is required and must be valid to open the google sheet that acts as a database for the net\r\n"
@@ -2515,12 +2527,13 @@ class Winlink_Checkins
             if (ICS203Ct > 0) { logWrite.WriteLine ("ICS 203 Checkins: " + ICS203Ct); }
             if (ICS204Ct > 0) { logWrite.WriteLine ("ICS 204 Checkins: " + ICS204Ct); }
             if (ICS205Ct > 0) { logWrite.WriteLine ("ICS 205a Checkins: " + ICS205Ct); }
-            if (ICS205aCt > 0 ) { logWrite.WriteLine ("ICS 205a Checkins: " + ICS205aCt); }
+            if (ICS205aCt > 0) { logWrite.WriteLine ("ICS 205a Checkins: " + ICS205aCt); }
+            if (ICS206Ct > 0) { logWrite.WriteLine ("ICS 206 Checkins: " + ICS206Ct); }
 
             if (radioGram > 0) { logWrite.WriteLine ("Radiogram Checkins: " + radioGramCt); }
             // next line is for the 20250203 exercise
             // logWrite.WriteLine ("Winlink Express: " + winlinkCt + "  PAT: " + patCt + "  RadioMail: " + radioMailCt + "  WoAD: " + woadCt + "\r\n");
-            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickMCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct - ICS204Ct - ICS205Ct - ICS205aCt) + "\r\n");
+            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickMCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct - ICS204Ct - ICS205Ct - ICS205aCt - ICS206Ct) + "\r\n");
             //var totalValidGPS = mapCt-noGPSCt;
             logWrite.WriteLine ("Total Checkins with a perfect message: (Not including " + noScoreCt + " NoScore's) " + perfectScoreCt);
             logWrite.WriteLine ("Total Checkins using the new format: " + newFormatCt);
@@ -2918,7 +2931,8 @@ class Winlink_Checkins
         return input;
 
     }
-    public static string checkMode (string input, string input2)
+    static (string, string, string) checkMode (string input, string input2, string error)
+    //static (DateTime, DateTime, string) getNetDates (DateTime startDate, DateTime endDate, string weekDay, int netLength)
     {
         if (input.IndexOf ("AREDN") > -1 || input.IndexOf ("MESH") > -1) input = "MESH";
         input = input
@@ -2929,7 +2943,8 @@ class Winlink_Checkins
             .Replace ("(", "")
             .Replace (")", "")
             .Replace (".", "")
-            .Replace ("STMP", "SMTP")
+            //.Replace ("STMP", "SMTP")
+            //.Replace ("SMPT", "SMTP")
             .Trim ();
         switch (input)
         {
@@ -2967,16 +2982,31 @@ class Winlink_Checkins
                 else { input = "VARA HF"; }
                 break;
 
+            case "SMPT":
+            case "SPMT":
+            case "STMP":
+                error = "\r\nTypo in the mode field: " + input + " - should be SMTP";
+                input = "SMTP";
+                break;
+
+
             case "FM":
             case "FM VARA":
             case "VARA-FM":
             case "VARAFM":
                 input = "VARA FM";
                 break;
+            case "ARDOP HF":
+            case "ARDOPHF":
+            case "HF ARDOP":
+            case "HFARDOP":
+                input = "ARDOP";
+                break;
+
 
             case "VARAHF":
             case "HFVARA":
-            // case "HF":
+            case "HF": // this was commented once, not sure why
             case "HF VARA":
             case "VARA-HF":
                 input = "VARA HF";
@@ -2990,7 +3020,7 @@ class Winlink_Checkins
                 input = "";
                 break;
         }
-        return input;
+        return (input, error, string.Empty);
     }
 
     public static string? [] removeFieldNumber (string? [] input)
@@ -3211,12 +3241,15 @@ class Winlink_Checkins
             .Replace ("| ", "|")
             .Replace ("\"", "")
             .Replace ("XX", "")
-            .Replace ("#", "")
+            //.Replace ("#", "")
             .Replace ("/", ",")
             .Trim ()
             .Trim (',')
             .Trim ('|')
-            .Trim (',');
+            .Trim ('#')
+            .Trim (',')
+            .Trim ();
+        if (msgField.Count (c => c == '#') < 3) msgField.Replace ("#", "");
 
         return msgField; // msgField is guaranteed non-null here
     }
@@ -3235,6 +3268,9 @@ class Winlink_Checkins
         }
         if (checkIn != null)
         {
+            len = 0;
+            // var tmp = checkIn.IndexOf ("\r\n");
+            //if (checkIn.IndexOf ("\r\n") != -1) len = checkIn.IndexOf ("\r\n") - 2;
             if (checkIn.IndexOf ("\r\n") != -1) len = checkIn.IndexOf ("\r\n");
             if (len > 0) checkIn = checkIn.Substring (0, len);
 
@@ -3242,6 +3278,10 @@ class Winlink_Checkins
             {
                 checkinItems = checkIn.Split ("|");
                 newFormat = true;
+            }
+            else if (checkIn.IndexOf ("#") > -1)
+            {
+                checkinItems = checkIn.Split ("#");
             }
             else if (checkIn.IndexOf ("\t") > -1)
             {
