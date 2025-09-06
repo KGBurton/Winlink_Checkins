@@ -66,7 +66,7 @@ class Winlink_Checkins
         Console.WriteLine ("How many days does the net last? (max of 7)");
         while (!isValid)
         {
-            if (int.TryParse (Console.ReadLine () ?? "", out netLength) && netLength > 0 && netLength <= 7)
+            if (int.TryParse (Console.ReadLine () ?? "", out netLength) && netLength > 0 && netLength <= 10)
             {
                 isValid = true;
             }
@@ -199,7 +199,7 @@ class Winlink_Checkins
         int endPosition = 0;
         int quotedPrintable = 0;
         int lastBoundary = 0;
-        int lineStart = -1;
+        // int lineStart = -1;
         int commentPos = 0;
         int len = 0;
         int msgTotal = 0;
@@ -259,6 +259,7 @@ class Winlink_Checkins
         int winlinkCt = 0;
         int patCt = 0;
         int woadCt = 0;
+        int airmailCt = 0;
         int radioMailCt = 0;
         int w3w = 0;
         int newFormatCt = 0;
@@ -836,9 +837,9 @@ class Winlink_Checkins
                     // check for WhatThreeWords
                     if (fileText.IndexOf ("///") > -1 || fileText.IndexOf ("W3W") > -1 || fileText.IndexOf ("WHAT 3 WORDS") > -1 || fileText.IndexOf ("WHAT3WORDS") > -1 || fileText.IndexOf ("WHATTHREEWORDS") > -1 || fileText.IndexOf ("UTMREF") > -1)
                     {
-                        w3w = 1;
+                        w3w++;
                     }
-                    else w3w = -1;
+                    
 
                     // check for Radiogram
                     radioGram = fileText.IndexOf ("\r\nAR \r\n");
@@ -1353,10 +1354,11 @@ class Winlink_Checkins
                             msgField = getMsgField (startPosition, endPosition, messageID, fileText, msgField);
 
                             // string checkinFrom = checkIn;
-                            // if (msgField.IndexOf ("WINLINK") > -1) winlinkCt++;
-                            // if (msgField.IndexOf ("PAT") > -1) patCt++;
-                            // if (msgField.IndexOf ("WOAD") > -1) woadCt++;
-                            // if (msgField.IndexOf ("RADIOMAIL") > -1 || msgField.IndexOf ("RADIO MAIL") > -1) radioMailCt++;
+                            if (msgField.IndexOf ("WINLINK") > -1) winlinkCt++;
+                            if (msgField.IndexOf ("PAT") > -1) patCt++;
+                            if (msgField.IndexOf ("WOAD") > -1) woadCt++;
+                            if (msgField.IndexOf ("AIRMAIL") > -1) airmailCt++;
+                            if (msgField.IndexOf ("RADIOMAIL") > -1 || msgField.IndexOf ("RADIO MAIL") > -1) radioMailCt++;
                             // 20250113 if (msgField.IndexOf ( netName + " Ask Template Exercise") > -1) exerciseCompleteCt++;
                             // 20250127 if (ICS201Ct >0) exerciseCompleteCt++;
                             // if (radioGram > 0) exerciseCompleteCt++; // 20250210 exercise
@@ -1917,7 +1919,8 @@ class Winlink_Checkins
                                         if (ExtractCoordinates (fileText.Substring (startPosition, len), out latitude, out longitude))
                                         {
                                             // Console.WriteLine(messageID+" latitude: "+latitude+" longitude: "+longitude);                                
-                                            maidenheadGrid = ExtractMaidenheadGrid (fileText.Substring (startPosition, len));
+                                            // maidenheadGrid = ExtractMaidenheadGrid (fileText.Substring (startPosition, len));
+                                            maidenheadGrid = ExtractMaidenheadGrid (msgField);
                                             if (maidenheadGrid == "invalid") Console.WriteLine (messageID);
                                         }
                                         else
@@ -1930,8 +1933,10 @@ class Winlink_Checkins
                                                 fileText = fileText.Insert (endPosition - 1, ", BP64JU\r\n").Replace ("  ", "|");
                                                 endPosition = fileText.IndexOf ("--BOUNDARY", endPosition);
                                                 len = endPosition - startPosition;
+                                                isPerfect = false;
                                             }
-                                            maidenheadGrid = ExtractMaidenheadGrid (fileText.Substring (startPosition, len));
+                                            // maidenheadGrid = ExtractMaidenheadGrid (fileText.Substring (startPosition, len));
+                                            maidenheadGrid = ExtractMaidenheadGrid (msgField);
                                             if (maidenheadGrid == "invalid") { Console.WriteLine (messageID); maidenheadGrid = ""; }
                                             if (!string.IsNullOrEmpty (maidenheadGrid))
                                             {
@@ -2035,15 +2040,15 @@ class Winlink_Checkins
                                         if (msgField.IndexOf ("UHF") > -1) { bandStr = "UHF"; }
                                     }
                                 }
-                                if (msgField != "" && msgField.IndexOf ("VARAHF") > -1)
+                                if (!string.IsNullOrEmpty (msgField) && msgField.IndexOf ("VARAHF") > -1)
                                 {
                                     if (bandStr == "") bandStr = "HF";
                                     modeStr = "VARA HF";
                                 }
 
-                                if (bandStr != "")
+                                if (!string.IsNullOrEmpty (bandStr))
                                 {
-                                    bandStr = checkBand (bandStr) ?? ""; // Ensure checkBand doesn't return null
+                                    bandStr = checkBand (bandStr) ?? "";
                                 }
                                 else
                                 {
@@ -2246,7 +2251,7 @@ class Winlink_Checkins
                                             if (onlyOneMarker && newFormatEndOnly) tmpMsgField = tmpMsgField + " ##";
 
                                             reminderTxt += "\r\n" + "\r\nThis is a copy of your extracted checkin data (in the correct format). \r\nCheckin Data: ## " + String.Join (" | ", checkinItems) + " ##" +
-                                                "\r\nOriginal Message for comparison: " + tmpMsgField + "\r\n\r\n" +
+                                                "\r\nOriginal Message for comparison: " + originalMsgField + "\r\n\r\n" +
                                                 "Your score is: " + score + "\r\n" + pointsOff +
                                                 "\r\nRecommended format reminder in the Comment/Message field:\r\ncallSign, firstname, city, county, state/province/region, country, band, Mode, grid\r\n" +
                                                "Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##\r\n" +
@@ -3255,12 +3260,8 @@ class Winlink_Checkins
         // int lineBreak = fileText.IndexOf("=\r\n");
         if (messageID.Contains ("AD4BL") && msgField != "")
         {
-            msgField = msgField
-                .Replace ("      ", " ")
-                .Replace ("    ", " ")
-                .Replace ("   ", " ")
-                .Replace (" ", "|")
-                .Replace ("|BOROUGH", " BOROUGH"); // put this space back
+            msgField = "## AD4BL | LINDA | NORTHSTARBOROUGH | FAIRBANKS | ALASKA | TELNET | SMTP ##";
+            
         } // AD4BL has a lot of spaces in the message field for delimiters
         int count = (msgField.Length - msgField.Replace ("  ", "").Length) / 4;// did they use spaces for delimiters?
         if (count > 5 && msgField != "")
@@ -3391,14 +3392,14 @@ class Winlink_Checkins
             {
                 modifiedInput = input
                     .Replace (delimiter, "|")
-                    .Replace ("  ", "") // Replace double spaces
-                    .Replace (" ", ""); // Replace space
+                    .Replace ("  ", ""); // Replace double spaces
+                    // .Replace (" ", ""); // Replace space - this breaks some things like cities with spaces
                 return (modifiedInput, modifiedInput.Split ("|"), true);
             }
         }
         input = input
-            .Replace ("  ", "") // Replace double spaces
-            .Replace (" ", ""); // Replace space
+            .Replace ("  ", " "); // Replace double spaces with singles
+            // .Replace (" ", ""); // Replace space  - this breaks some things like cities with spaces
         // No delimiter had more than 3 occurrences
         return (input, Array.Empty<string> (), false);
     }
