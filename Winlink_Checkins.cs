@@ -564,7 +564,10 @@ class Winlink_Checkins
                     endPosition = fileText.IndexOf ("\r\n", startPosition);
                     len = endPosition - startPosition;
                     fromTxt = fileText.Substring (startPosition, len);
-                    fromTxt = fromTxt.Replace (',', ' ');
+                    fromTxt = fromTxt
+                        .Replace ("=20", "")
+                        .Replace (" ", "")
+                        .Replace (',', ' ');
                     tempFromTxt = isValidCallsign (fromTxt);
                     if (tempFromTxt == "")
                     {
@@ -839,7 +842,7 @@ class Winlink_Checkins
                     {
                         w3w++;
                     }
-                    
+
 
                     // check for Radiogram
                     radioGram = fileText.IndexOf ("\r\nAR \r\n");
@@ -1817,7 +1820,7 @@ class Winlink_Checkins
                                 {
                                     if (msgField != null && addonString != null)
                                     {
-                                        addonString.Append (checkIn + ":\t" + msgField.Replace ("\n", ", ").Replace ("\r", "") + "\r\n");
+                                        addonString.Append (checkIn + ":\t" + msgField.Replace ("\n", ", ").Replace ("\r", "").Replace ("|", "\t") + "\r\n");
                                     }
                                 }
                                 else
@@ -1864,6 +1867,7 @@ class Winlink_Checkins
 
                                 if (winlinkCkin > 0)
                                 {
+                                    // get latitude from the winlink checkin
                                     startPosition = fileText.IndexOf ("LATITUDE:");
                                     if (startPosition > -1)
                                     {
@@ -1881,6 +1885,7 @@ class Winlink_Checkins
                                             if (latitudeStr != "") { latitude = Common.ConvertToDouble (latitudeStr); }
                                         }
                                     }
+                                    // get longitude from the winlink checkin
                                     startPosition = fileText.IndexOf ("LONGITUDE:");
                                     if (startPosition > -1)
                                     {
@@ -1899,18 +1904,60 @@ class Winlink_Checkins
                                             if (longitudeStr != "") { longitude = Common.ConvertToDouble (longitudeStr); }
                                         }
                                     }
+                                    // get maidenhead grid from the winlink checkin
+                                    startPosition = fileText.IndexOf ("GRID SQUARE:");
+                                    if (startPosition > -1 && fileText != null)
+                                    {
+                                        startPosition += 12;
+                                        endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                        if (endPosition > startPosition) // Ensure valid substring range
+                                        {
+                                            len = endPosition - startPosition;
+                                            if (len > 0)
+                                            {
+                                                maidenheadGrid = fileText.Substring (startPosition, len).Trim ();
+                                            }
+                                            else
+                                            {
+                                                maidenheadGrid = !string.IsNullOrEmpty (msgField) ? ExtractMaidenheadGrid (msgField) ?? string.Empty : string.Empty;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            maidenheadGrid = !string.IsNullOrEmpty (msgField) ? ExtractMaidenheadGrid (msgField) ?? string.Empty : string.Empty;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        maidenheadGrid = !string.IsNullOrEmpty (msgField) ? ExtractMaidenheadGrid (msgField) ?? string.Empty : string.Empty;
+                                    }
+                                    //if (startPosition > -1)
+                                    //{
+                                    //    startPosition += 12;
+                                    //    endPosition = fileText.IndexOf ("\r\n", startPosition);
+                                    //    len = endPosition - startPosition;
+                                    //    if (len > 0)
+                                    //    {
+                                    //        maidenheadGrid = fileText.Substring (startPosition, len);
+                                    //        maidenheadGrid.Trim ();
+                                    //    } else maidenheadGrid = ExtractMaidenheadGrid (msgField);
+                                    //}
                                 }
+
                                 if (latitudeStr == "" || longitudeStr == "")
                                 {
                                     //skip past the messageID because sometimes the regex for coordinates matches it
                                     // and stop before reading any binary attachments
 
                                     // startPosition = quotedPrintable;
-                                    startPosition = fileText.IndexOf ("MESSAGE-ID:");
-                                    startPosition = fileText.IndexOf ("\r\n", startPosition);
+                                    //startPosition = fileText.IndexOf ("MESSAGE-ID:");
+                                    startPosition = fileText != null ? fileText.IndexOf ("MESSAGE-ID:") : -1;
+                                    // startPosition = fileText.IndexOf ("\r\n", startPosition);
+                                    startPosition = fileText != null ? fileText.IndexOf ("\r\n", startPosition) : -1;
                                     if (startPosition > -1) { startPosition += 2; }
                                     // need an end position because some messages have a binary attachment that gives a false match
-                                    endPosition = fileText.IndexOf ("PRINTABLE", startPosition);
+                                    // endPosition = fileText.IndexOf ("PRINTABLE", startPosition);
+                                    endPosition = fileText != null ? fileText.IndexOf ("PRINTABLE", startPosition) : -1;
                                     // endPosition = fileText.IndexOf ("--BOUNDARY", endPosition);
                                     endPosition = lastBoundary;
                                     len = endPosition - startPosition;
@@ -2224,7 +2271,8 @@ class Winlink_Checkins
                                     if (isValidCallsign (callSignTypo) == "") reminderTxt += "You may have switched your call sign and name or left the call sign out";
 
                                 }
-                                if ((maidenheadGrid == "invalid") || (maidenheadGrid == "" && len > 8)) reminderTxt += "\r\nCheck for a typo in your Maidenhead Grid (should be either xx##xx or xx##): " + msgField + "\r\n";
+                                if ((maidenheadGrid == "invalid") || (maidenheadGrid == "" && len > 8))
+                                { reminderTxt += "\r\nCheck for a typo in your Maidenhead Grid (should be either xx##xx or xx##): " + msgField + "\r\n"; }
                                 if (noScore == -1)
                                 {
                                     if (isPerfect)
@@ -2700,15 +2748,33 @@ class Winlink_Checkins
         return (input, found);
     }
 
+    //static string ExtractMaidenheadGrid (string input)
+    //// This method extracts a Maidenhead grid (e.g., DN43du) from the input string
+    //{
+    //    // Define the regular expression for Maidenhead grid locator (4 or 6 character grids)
+    //    // Regex regex = new Regex (@"\b([A-R]{2}\d{2}[A-X]{0,2}[a-xA-X]{0,2})\b", RegexOptions.IgnoreCase);
+    //    // Regex regex = new Regex (@"([A-R]{2}\d{2}[A-X]{0,2}[a-xA-X]{0,2})", RegexOptions.IgnoreCase);
+    //    Regex regex = new Regex (@"([A-R]{2}\d{2}(?:[A-X]{2})?)", RegexOptions.IgnoreCase);
+    //    input = input.Replace ("-", "").Replace (" ", "").Replace ("NOSCORE", "");
+    //    // Search for a match in the input string
+    //    Match match = regex.Match (input);
+
+    //    if (match.Success)
+    //    {
+    //        if (match.Value.Length == 4 || match.Value.Length == 6)
+    //        {
+    //            return match.Value.ToUpper ();
+    //        }
+    //        Console.WriteLine ($"Invalid Maidenhead grid format: {match.Value} (length {match.Value.Length})");
+    //        return "invalid";
+    //    }
+
+    //    return string.Empty; // Return an empty string if no match is found
+    //}
     static string ExtractMaidenheadGrid (string input)
-    // This method extracts a Maidenhead grid (e.g., DN43du) from the input string
     {
-        // Define the regular expression for Maidenhead grid locator (4 or 6 character grids)
-        // Regex regex = new Regex (@"\b([A-R]{2}\d{2}[A-X]{0,2}[a-xA-X]{0,2})\b", RegexOptions.IgnoreCase);
-        // Regex regex = new Regex (@"([A-R]{2}\d{2}[A-X]{0,2}[a-xA-X]{0,2})", RegexOptions.IgnoreCase);
         Regex regex = new Regex (@"([A-R]{2}\d{2}(?:[A-X]{2})?)", RegexOptions.IgnoreCase);
         input = input.Replace ("-", "").Replace (" ", "").Replace ("NOSCORE", "");
-        // Search for a match in the input string
         Match match = regex.Match (input);
 
         if (match.Success)
@@ -2719,12 +2785,11 @@ class Winlink_Checkins
                 Console.WriteLine ("Invalid Maidenhead grid format - must be either 4 or 6 characters");
                 return "invalid";
             }
-            return match.Value.ToUpper (); // Return the Maidenhead grid in uppercase
+            return match.Value.ToUpper ();
         }
 
-        return string.Empty; // Return an empty string if no match is found
+        return string.Empty;
     }
-
     static (double, double) MaidenheadToGPS (string maidenhead)
     // This method converts a Maidenhead grid to latitude and longitude
     {
@@ -2884,6 +2949,7 @@ class Winlink_Checkins
             .Replace ("-", "")
             .Replace (".", "")
             .Replace ("O", "0")
+            .Replace ("2N", "2M")
             ;
         switch (input)
         {
@@ -2994,7 +3060,6 @@ class Winlink_Checkins
         switch (input)
         {
             case "SMTP":
-            case "TELNET":
             case "PACKET":
             case "ARDOP":
             case "ARDOPC":
@@ -3028,6 +3093,7 @@ class Winlink_Checkins
                 break;
 
             case "SMPT":
+            case "TELNET":
             case "SPMT":
             case "STMP":
                 error = "\r\nTypo in the mode field: " + input + " - should be SMTP";
@@ -3038,6 +3104,7 @@ class Winlink_Checkins
             case "FM":
             case "FM VARA":
             case "VARA-FM":
+            case "VARA FN":
             case "VARAFM":
                 input = "VARA FM";
                 break;
@@ -3050,6 +3117,7 @@ class Winlink_Checkins
 
 
             case "VARAHF":
+            case "VARAFH":
             case "HFVARA":
             case "HF": // this was commented once, not sure why
             case "HF VARA":
@@ -3261,7 +3329,7 @@ class Winlink_Checkins
         if (messageID.Contains ("AD4BL") && msgField != "")
         {
             msgField = "## AD4BL | LINDA | NORTHSTARBOROUGH | FAIRBANKS | ALASKA | TELNET | SMTP ##";
-            
+
         } // AD4BL has a lot of spaces in the message field for delimiters
         int count = (msgField.Length - msgField.Replace ("  ", "").Length) / 4;// did they use spaces for delimiters?
         if (count > 5 && msgField != "")
@@ -3393,14 +3461,14 @@ class Winlink_Checkins
                 modifiedInput = input
                     .Replace (delimiter, "|")
                     .Replace ("  ", ""); // Replace double spaces
-                    // .Replace (" ", ""); // Replace space - this breaks some things like cities with spaces
+                                         // .Replace (" ", ""); // Replace space - this breaks some things like cities with spaces
                 return (modifiedInput, modifiedInput.Split ("|"), true);
             }
         }
         input = input
             .Replace ("  ", " "); // Replace double spaces with singles
-            // .Replace (" ", ""); // Replace space  - this breaks some things like cities with spaces
-        // No delimiter had more than 3 occurrences
+                                  // .Replace (" ", ""); // Replace space  - this breaks some things like cities with spaces
+                                  // No delimiter had more than 3 occurrences
         return (input, Array.Empty<string> (), false);
     }
 
