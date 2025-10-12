@@ -252,6 +252,7 @@ class Winlink_Checkins
         int ICS205aCt = 0;
         int ICS206Ct = 0;
         int ICS208Ct = 0;
+        int ICS210Ct = 0;
 
         int exerciseCompleteCt = 0;
         int radioGram = 0;
@@ -561,7 +562,8 @@ class Winlink_Checkins
                     startPosition = fileText.IndexOf ("FROM:", startPosition);
 
                     if (startPosition > -1) { startPosition += 6; }
-                    endPosition = fileText.IndexOf ("\r\n", startPosition);
+                    endPosition = fileText.IndexOf ("@", startPosition);// skip any domain info
+                    if (endPosition == -1) endPosition = fileText.IndexOf ("\r\n", startPosition); // otherwise the end of the line
                     len = endPosition - startPosition;
                     fromTxt = fileText.Substring (startPosition, len);
                     fromTxt = fromTxt
@@ -571,7 +573,7 @@ class Winlink_Checkins
                     tempFromTxt = isValidCallsign (fromTxt);
                     if (tempFromTxt == "")
                     {
-                        Console.WriteLine ("562 Invalid callsign in the From: field =>" + fromTxt + "<= of messageID" + messageID);
+                        Console.WriteLine ("576 Invalid callsign in the From: field =>" + fromTxt + "<= of messageID" + messageID);
                     }
                     else fromTxt = tempFromTxt;
 
@@ -598,7 +600,7 @@ class Winlink_Checkins
                     if (js8call > -1) js8ct++;
 
                     // check for acknowledgement message and discard later                  
-                    int ack = fileText.IndexOf ("ACKNOWLEDGEMENT");
+                    int ack = fileText.IndexOf ("[MESSAGE ACKNOWLEDGEMENT]");
 
                     // check for ICS 213 msg
                     var ics = fileText.IndexOf ("TEMPLATE VERSION: ICS 213");
@@ -836,6 +838,10 @@ class Winlink_Checkins
                     // check for ICS-208
                     var ICS208 = fileText.IndexOf ("ICS 208 SAFETY MESSAGE-PLAN");
                     if (ICS208 > -1) ICS208Ct++;
+
+                    // check for ICS-210
+                    var ICS210 = fileText.IndexOf ("ICS 210");
+                    if (ICS210 > -1) ICS210Ct++;
 
                     // check for WhatThreeWords
                     if (fileText.IndexOf ("///") > -1 || fileText.IndexOf ("W3W") > -1 || fileText.IndexOf ("WHAT 3 WORDS") > -1 || fileText.IndexOf ("WHAT3WORDS") > -1 || fileText.IndexOf ("WHATTHREEWORDS") > -1 || fileText.IndexOf ("UTMREF") > -1)
@@ -1395,7 +1401,12 @@ class Winlink_Checkins
                                 string safeMessageID = messageID ?? "";
                                 Console.WriteLine ("Message Field is empty in: " + safeMessageID);
                             }
-
+                            // check for suffix on the callsign and remove it
+                            int suffixPos = string.IsNullOrEmpty (checkIn) ? -1 : checkIn.IndexOf ("/");
+                            if (suffixPos > -1)
+                            {
+                                checkIn = checkIn.Substring (0, suffixPos);
+                            }
                             // now check to see if it is a perfect message and deduct points if not
                             // checkin call sign
 
@@ -1442,12 +1453,12 @@ class Winlink_Checkins
                                     if (tempFromTxt == "")
                                     {
                                         if (fromTxt != null) callSignTypo = fromTxt;
-                                        Console.WriteLine ("1423 fromTxt is null or invalid in :" + messageID);
+                                        Console.WriteLine ("1456 fromTxt is null or invalid in :" + messageID);
                                     }
                                     else if (tempCheckIn == "")
                                     {
                                         if (checkIn != null) callSignTypo = checkIn;
-                                        Console.WriteLine ("1428 checkIn: " + checkIn + " from msgField " + msgField + " is null, invalid, or does not match the From data: " + fromTxt + " in :" + messageID);
+                                        Console.WriteLine ("1461 checkIn: " + checkIn + " from msgField " + msgField + " is null, invalid, or does not match the From data: " + fromTxt + " in :" + messageID);
                                         if (checkIn == null) checkIn = fromTxt;
                                     }
                                 }
@@ -1974,15 +1985,16 @@ class Winlink_Checkins
                                         {
                                             // no valid GPS coordinates found, look for a maidenhead grid
                                             // linda in AK uses something funky to checkin and never puts things in the correct format.
+                                            // now fixed approximately at 3229
                                             // This should at least keep her from showing up in the Atlantic Ocean
-                                            if (fromTxt == "AD4BL")
-                                            {
-                                                fileText = fileText.Insert (endPosition - 1, ", BP64JU\r\n").Replace ("  ", "|");
-                                                endPosition = fileText.IndexOf ("--BOUNDARY", endPosition);
-                                                len = endPosition - startPosition;
-                                                isPerfect = false;
-                                            }
-                                            // maidenheadGrid = ExtractMaidenheadGrid (fileText.Substring (startPosition, len));
+                                            //if (fromTxt == "AD4BL")
+                                            //{
+                                            //    fileText = fileText.Insert (endPosition - 1, ", BP64JU\r\n").Replace ("  ", "|");
+                                            //    endPosition = fileText.IndexOf ("--BOUNDARY", endPosition);
+                                            //    len = endPosition - startPosition;
+                                            //    isPerfect = false;
+                                            //}
+                                            //// maidenheadGrid = ExtractMaidenheadGrid (fileText.Substring (startPosition, len));
                                             maidenheadGrid = ExtractMaidenheadGrid (msgField);
                                             if (maidenheadGrid == "invalid") { Console.WriteLine (messageID); maidenheadGrid = ""; }
                                             if (!string.IsNullOrEmpty (maidenheadGrid))
@@ -2572,6 +2584,7 @@ class Winlink_Checkins
                 // ++++
                 if (newCheckIns != null && tmpInput != "Y")
                 {
+                    Console.WriteLine ("\r\nGoogle Update is in process and the roster.txt file will be updated.\r\n");
                     UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, removalString, spreadsheetId, endDate, credentialFilename, ct);
                 }
                 else
@@ -2604,7 +2617,7 @@ class Winlink_Checkins
             if (winlinkCkinCt > 0) { logWrite.WriteLine ("Winlink Check-in Checkins: " + winlinkCkinCt); }
             if (damAssessCt > 0) { logWrite.WriteLine ("Damage Assessment Checkins: " + damAssessCt); }
             if (fieldSitCt > 0) { logWrite.WriteLine ("Field Situation Report Checkins: " + fieldSitCt); }
-            if (quickMCt > 0) { logWrite.WriteLine ("Quick H&W: " + quickMCt); }
+            // if (quickMCt > 0) { logWrite.WriteLine ("Quick H&W: " + quickMCt); }
             if (qwmCt > 0) { logWrite.WriteLine ("Quick Welfare Message: " + qwmCt); }
             if (dyfiCt > 0) { logWrite.WriteLine ("Did You Feel It: " + dyfiCt); }
             if (rriCt > 0) { logWrite.WriteLine ("RRI Welfare Radiogram: " + rriCt); }
@@ -2620,11 +2633,12 @@ class Winlink_Checkins
             if (ICS205aCt > 0) { logWrite.WriteLine ("ICS 205a Checkins: " + ICS205aCt); }
             if (ICS206Ct > 0) { logWrite.WriteLine ("ICS 206 Checkins: " + ICS206Ct); }
             if (ICS208Ct > 0) { logWrite.WriteLine ("ICS 208 Checkins: " + ICS208Ct); }
+            if (ICS210Ct > 0) { logWrite.WriteLine ("ICS 210 Checkins: " + ICS210Ct); }
 
             if (radioGram > 0) { logWrite.WriteLine ("Radiogram Checkins: " + radioGramCt); }
             // next line is for the 20250203 exercise
             // logWrite.WriteLine ("Winlink Express: " + winlinkCt + "  PAT: " + patCt + "  RadioMail: " + radioMailCt + "  WoAD: " + woadCt + "\r\n");
-            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - quickMCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct - ICS204Ct - ICS205Ct - ICS205aCt - ICS206Ct - ICS208Ct) + "\r\n");
+            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - qwmCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct - ICS204Ct - ICS205Ct - ICS205aCt - ICS206Ct - ICS208Ct - ICS210Ct) + "\r\n");
             //var totalValidGPS = mapCt-noGPSCt;
             logWrite.WriteLine ("Total Checkins with a perfect message: (Not including " + noScoreCt + " NoScore's) " + perfectScoreCt);
             logWrite.WriteLine ("Total Checkins using the new format: " + newFormatCt);
@@ -3326,9 +3340,10 @@ class Winlink_Checkins
 
         msgField = fileText.Substring (startPosition, len);
         // int lineBreak = fileText.IndexOf("=\r\n");
-        if (messageID.Contains ("AD4BL") && msgField != "")
+        if (messageID.Contains ("AD4BL"))
         {
-            msgField = "## AD4BL | LINDA | NORTHSTARBOROUGH | FAIRBANKS | ALASKA | TELNET | SMTP ##";
+            Console.WriteLine ("AD4BL sent:" + msgField);
+            msgField = "## AD4BL | LINDA | NORTHSTARBOROUGH | FAIRBANKS | AK | USA | TELNET | SMTP | BP64ju ##";
 
         } // AD4BL has a lot of spaces in the message field for delimiters
         int count = (msgField.Length - msgField.Replace ("  ", "").Length) / 4;// did they use spaces for delimiters?
