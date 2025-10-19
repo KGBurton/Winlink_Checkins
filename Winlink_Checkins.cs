@@ -63,16 +63,16 @@ class Winlink_Checkins
         // DateTime endDate = default;
 
 
-        Console.WriteLine ("How many days does the net last? (max of 7)");
+        Console.WriteLine ("How many days does the net last? (max of 10)");
         while (!isValid)
         {
-            if (int.TryParse (Console.ReadLine () ?? "", out netLength) && netLength > 0 && netLength <= 10)
+            if (int.TryParse (Console.ReadLine () ?? "", out netLength) && netLength > 0 && netLength <= 12)
             {
                 isValid = true;
             }
             else
             {
-                Console.WriteLine ("Please enter a number between 1 and 7.");
+                Console.WriteLine ("Please enter a number between 1 and 10.");
             }
         }
         isValid = false;
@@ -253,6 +253,7 @@ class Winlink_Checkins
         int ICS206Ct = 0;
         int ICS208Ct = 0;
         int ICS210Ct = 0;
+        int WBBMct = 0;
 
         int exerciseCompleteCt = 0;
         int radioGram = 0;
@@ -843,6 +844,10 @@ class Winlink_Checkins
                     var ICS210 = fileText.IndexOf ("ICS 210");
                     if (ICS210 > -1) ICS210Ct++;
 
+                    // check for  Welfare Bulletin Board Message
+                    WBBMct = fileText.IndexOf ("WELFARE BULLETIN BOARD MESSAGE");
+                    if (WBBMct > -1) WBBMct++;
+
                     // check for WhatThreeWords
                     if (fileText.IndexOf ("///") > -1 || fileText.IndexOf ("W3W") > -1 || fileText.IndexOf ("WHAT 3 WORDS") > -1 || fileText.IndexOf ("WHAT3WORDS") > -1 || fileText.IndexOf ("WHATTHREEWORDS") > -1 || fileText.IndexOf ("UTMREF") > -1)
                     {
@@ -1382,6 +1387,13 @@ class Winlink_Checkins
                             if (len > 0)
                             {
                                 checkinItems = getCheckinData (len, msgField, checkinItems, newFormat);
+                                if (checkinItems != null && checkinItems.Length > 0)
+                                {
+                                    checkinItems = checkinItems
+                                        .Select (item => item!.Replace (",", ""))  // ! tells compiler it's safe
+                                        .ToArray ();
+                                }
+
                                 if (checkinItems != null && checkinItems.Length > 0 && checkinItems [0] != null)
                                 {
                                     var item0 = checkinItems [0];
@@ -1391,7 +1403,7 @@ class Winlink_Checkins
                                 {
                                     checkIn = null; // Explicitly set to null
                                     string safeMessageID = messageID ?? "";
-                                    Console.WriteLine ("1348 Invalid checkin data in messageID: " + safeMessageID);
+                                    Console.WriteLine ("1406 Invalid checkin data in messageID: " + safeMessageID);
                                 }
                                 // checkIn = checkIn?.Trim() ?? "";
                             }
@@ -1402,10 +1414,10 @@ class Winlink_Checkins
                                 Console.WriteLine ("Message Field is empty in: " + safeMessageID);
                             }
                             // check for suffix on the callsign and remove it
-                            int suffixPos = string.IsNullOrEmpty (checkIn) ? -1 : checkIn.IndexOf ("/");
+                            int suffixPos = checkIn?.IndexOf ("/") ?? -1;
                             if (suffixPos > -1)
                             {
-                                checkIn = checkIn.Substring (0, suffixPos);
+                                checkIn = checkIn? [0..suffixPos] ?? ""; // Range operator (C# 8+) - null-safe
                             }
                             // now check to see if it is a perfect message and deduct points if not
                             // checkin call sign
@@ -1428,6 +1440,12 @@ class Winlink_Checkins
                                     len = msgField.Length;
                                     checkinItems = new string [10];
                                     checkinItems = getCheckinData (len, msgField, checkinItems, newFormat);
+                                    if (checkinItems != null && checkinItems.Length > 0)
+                                    {
+                                        checkinItems = checkinItems
+                                            .Select (item => item!.Replace (",", ""))  // ! tells compiler it's safe
+                                            .ToArray ();
+                                    }
                                     if (checkinItems != null && checkinItems.Length > 0 && checkinItems [0] != null)
                                     {
                                         var item0 = checkinItems [0];
@@ -1458,7 +1476,7 @@ class Winlink_Checkins
                                     else if (tempCheckIn == "")
                                     {
                                         if (checkIn != null) callSignTypo = checkIn;
-                                        Console.WriteLine ("1461 checkIn: " + checkIn + " from msgField " + msgField + " is null, invalid, or does not match the From data: " + fromTxt + " in :" + messageID);
+                                        Console.WriteLine ("1479 checkIn: " + checkIn + " from msgField " + msgField + " is null, invalid, or does not match the From data: " + fromTxt + " in :" + messageID);
                                         if (checkIn == null) checkIn = fromTxt;
                                     }
                                 }
@@ -2565,7 +2583,7 @@ class Winlink_Checkins
                 commentWrite.WriteLine (addonString);
             }
             // Add Google Sheets update
-            Console.WriteLine ("\r\n\r\nDo you want to skip updating the google spreadsheet? (Y/N default). \nIf you leave it blank, the program will assume don't skip\n");
+            Console.WriteLine ("\r\n\r\nDo you want to skip updating the google spreadsheet? (Y(es) or S(kip) - No is the default). \nIf you leave it blank, the program will assume don't skip\n");
             ConsoleKeyInfo keyInfo = Console.ReadKey (); // Reads a single key without needing Enter
             string? tmpInput = keyInfo.KeyChar.ToString (); // Convert the character to a string
                                                             // char tmpInput = keyInfo.KeyChar; // Get the character from the key press
@@ -2582,7 +2600,7 @@ class Winlink_Checkins
                 // Console.WriteLine ("\r\nGoogle Update is turned off\r\n");
 
                 // ++++
-                if (newCheckIns != null && tmpInput != "Y")
+                if (newCheckIns != null && tmpInput != "Y" && tmpInput != "S")
                 {
                     Console.WriteLine ("\r\nGoogle Update is in process and the roster.txt file will be updated.\r\n");
                     UpdateGoogleSheet (netCheckinString, netAckString2, newCheckIns, removalString, spreadsheetId, endDate, credentialFilename, ct);
@@ -2634,11 +2652,12 @@ class Winlink_Checkins
             if (ICS206Ct > 0) { logWrite.WriteLine ("ICS 206 Checkins: " + ICS206Ct); }
             if (ICS208Ct > 0) { logWrite.WriteLine ("ICS 208 Checkins: " + ICS208Ct); }
             if (ICS210Ct > 0) { logWrite.WriteLine ("ICS 210 Checkins: " + ICS210Ct); }
+            if (WBBMct > 0) { logWrite.WriteLine ("Welfare Bulletin Board Checkins: " + WBBMct); }
 
             if (radioGram > 0) { logWrite.WriteLine ("Radiogram Checkins: " + radioGramCt); }
             // next line is for the 20250203 exercise
             // logWrite.WriteLine ("Winlink Express: " + winlinkCt + "  PAT: " + patCt + "  RadioMail: " + radioMailCt + "  WoAD: " + woadCt + "\r\n");
-            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - qwmCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct - ICS204Ct - ICS205Ct - ICS205aCt - ICS206Ct - ICS208Ct - ICS210Ct) + "\r\n");
+            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - qwmCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct - ICS204Ct - ICS205Ct - ICS205aCt - ICS206Ct - ICS208Ct - ICS210Ct - WBBMct) + "\r\n");
             //var totalValidGPS = mapCt-noGPSCt;
             logWrite.WriteLine ("Total Checkins with a perfect message: (Not including " + noScoreCt + " NoScore's) " + perfectScoreCt);
             logWrite.WriteLine ("Total Checkins using the new format: " + newFormatCt);
@@ -3095,7 +3114,10 @@ class Winlink_Checkins
             case "ROBUST PACKET":
             case "JS8CALL":
                 break;
-
+            case "PACLET": // common typo
+                error = "\r\nTypo in the mode field: " + input + " - should be PACKET";
+                input = "PACKET";
+                break;
             case "PACKET FM":
             case "X.25":
             case "AX.25":
@@ -3114,7 +3136,6 @@ class Winlink_Checkins
                 input = "SMTP";
                 break;
 
-
             case "FM":
             case "FM VARA":
             case "VARA-FM":
@@ -3122,6 +3143,7 @@ class Winlink_Checkins
             case "VARAFM":
                 input = "VARA FM";
                 break;
+
             case "ARDOP HF":
             case "ARDOPHF":
             case "HF ARDOP":
