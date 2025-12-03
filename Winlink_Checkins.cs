@@ -187,6 +187,8 @@ class Winlink_Checkins
         string base64String = "";
         string attachmentDecodedString = string.Empty;
         string modeTypo = "";
+        string RRrow = "";
+
 
         // string w3wText = "";
 
@@ -216,6 +218,7 @@ class Winlink_Checkins
         int severeWeatherCt = 0;
         int incidentStatusCt = 0;
         int icsCt = 0;
+        int ics213RRCt = 0;
         int winlinkCkinCt = 0;
         int damAssessCt = 0;
         int fieldSitCt = 0;
@@ -475,8 +478,9 @@ class Winlink_Checkins
                         .Replace ("NO SCORE", "NOSCORE")
                         .Replace ("NO SUMMARY", "NOSUMMARY")
                         .Replace ("=0A", "\r\n")
-                        .Replace ("=\r\n", "") // remove line wraps
-                        .Replace ("=20", " ");
+                        .Replace ("=\r\n", "") // remove unwanted winlink express line wraps
+                        .Replace ("=20", " ")  // remove unwanted winlink express continuation code
+                        .Replace ("# #", "##") ; // remove extraneous spaces from checkin data markers
 
                     // get needed header info
                     startPosition = fileText.IndexOf ("DATE: ");
@@ -603,10 +607,13 @@ class Winlink_Checkins
                     // check for acknowledgement message and discard later                  
                     int ack = fileText.IndexOf ("[MESSAGE ACKNOWLEDGEMENT]");
 
-                    // check for ICS 213 msg
-                    var ics = fileText.IndexOf ("TEMPLATE VERSION: ICS 213");
+                    // check for ICS-213 msg
+                    var ics = fileText.IndexOf ("TEMPLATE VERSION: ICS 213 ");
                     if (ics > -1) icsCt++;
 
+                    // check for ICS-213RR msg
+                    var ics213rr = fileText.IndexOf ("TEMPLATE VERSION: ICS 213RR ");
+                    if (ics213rr > -1) ics213RRCt++;
 
                     // check for winlink checkin message
                     var winlinkCkin = fileText.IndexOf ("MAP FILE NAME: WINLINK CHECK", endHeader);
@@ -1113,6 +1120,7 @@ class Winlink_Checkins
                                         endPosition = fileText.IndexOf ("APPROVED BY:", startPosition) - 3;
                                     }
                                 }
+
                                 // adjust for winlink checkin
                                 else if (winlinkCkin > -1 && !newFormat)
                                 {
@@ -1173,8 +1181,11 @@ class Winlink_Checkins
                                 else if (dyfi > -1 && !newFormat)
                                 {
                                     startPosition = fileText.IndexOf ("COMMENTS");
-                                    if (startPosition > -1) { startPosition += 11; }
-                                    endPosition = fileText.IndexOf ("\r\n", startPosition) - 1;
+                                    if (startPosition > -1)
+                                    {
+                                        startPosition += 11;
+                                        endPosition = fileText.IndexOf ("\r\n", startPosition) - 1;
+                                    }
                                 }
 
                                 else if (rriWR > -1 && !newFormat)
@@ -1351,6 +1362,7 @@ class Winlink_Checkins
                                 }
                             }
 
+
                             if (newFormatEndOnly || newFormatStartOnly) reminderTxt += "\r\nYou are encouraged to use the new format with '##' at both the beginning and end of your checkin data";
                             else if (!newFormat) reminderTxt += "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data with '|' delimiters!";
                             else if (newFormatPipeOnly) reminderTxt += "\r\nYou are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data";
@@ -1526,6 +1538,30 @@ class Winlink_Checkins
                                 checkinCountry = "";
                                 checkinCountryLong = "";
                                 longCountry = false;
+
+                                // collect request lines for ICS 213RR
+                                if (ics213rr > -1)
+                                {
+                                    // get request info
+                                    int rowStart = 0;
+                                    int rowEnd = 0;
+                                    int maxRows = 2;
+                                    int rowCt = 0;
+                                    RRrow = "";
+
+                                    while (rowCt < maxRows)
+                                    {
+                                        rowStart = fileText.IndexOf ("KIND: ", rowStart);
+                                        rowEnd = fileText.IndexOf ("COST: ", rowStart);
+                                        rowEnd = fileText.IndexOf ("\r\n", rowEnd);
+                                        RRrow = RRrow + fileText.Substring (rowStart, rowEnd - rowStart) + ",";
+                                        rowStart = rowEnd;
+                                        // Console.WriteLine (RRrow);
+                                        rowCt++;
+                                    }
+                                    RRrow = RRrow.Replace ("\r\n", " ") + " ";
+                                    Console.WriteLine (RRrow);
+                                }
 
                                 len = 0;
                                 if (checkinItems != null) len = checkinItems.Length;
@@ -1814,6 +1850,10 @@ class Winlink_Checkins
                                             }
                                         }
                                     }
+                                    if (checkinItems != null && len >= 9)
+                                    {
+                                        maidenheadGrid = !string.IsNullOrEmpty (checkinItems [8]) ? ExtractMaidenheadGrid (checkinItems [8]) ?? string.Empty : string.Empty;
+                                    }
                                 }
                                 // check to see if this is a duplicate checkin
                                 if (checkIn != null) startPosition = testString.IndexOf (checkIn);
@@ -1849,7 +1889,7 @@ class Winlink_Checkins
                                 {
                                     if (msgField != null && addonString != null)
                                     {
-                                        addonString.Append (checkIn + ":\t" + msgField.Replace ("\n", ", ").Replace ("\r", "").Replace ("|", "\t") + "\r\n");
+                                        addonString.Append (checkIn + ":\t" + RRrow + msgField.Replace ("\n", ", ").Replace ("\r", "").Replace ("|", "\t") + "\r\n");
                                     }
                                 }
                                 else
@@ -1885,9 +1925,14 @@ class Winlink_Checkins
                                                 .Trim (',');
                                             if (notFirstLine.Length > 0 && addonString != null)
                                             {
-                                                addonString.Append (checkIn + ":\t" + notFirstLine + "\r\n");
+                                                addonString.Append (checkIn + ":\t" + RRrow + notFirstLine + "\r\n");
                                             }
                                         }
+                                    }
+                                    else
+                                    {
+                                        // pick up the Request Row if there is no other comment
+                                        addonString.Append (checkIn + ":\t" + RRrow + "\r\n");
                                     }
                                 }
 
@@ -2302,14 +2347,18 @@ class Winlink_Checkins
 
                                 }
                                 if ((maidenheadGrid == "invalid") || (maidenheadGrid == "" && len > 8))
-                                { reminderTxt += "\r\nCheck for a typo in your Maidenhead Grid (should be either xx##xx or xx##): " + msgField + "\r\n"; }
+                                { reminderTxt += "\r\nCheck for a typo in your Maidenhead Grid (should be either xx##x or xx##): " + msgField + "\r\n"; }
                                 if (noScore == -1)
                                 {
                                     if (isPerfect)
                                     {
                                         // reminderTxt += "\r\nThis is a copy of your extracted checkin data. \r\nMessage: \r\n" + msgField + "\r\n\r\nPerfect Message! Your score is 10.";
-                                        if (checkinItems != null) reminderTxt += "\r\nThis is a copy of your extracted checkin data (in the correct format): \r\n## " + String.Join (" | ", checkinItems) + " ##\r\n\r\nPerfect Message! Your score is 10.";
-                                        perfectScoreCt++;
+                                        if (checkinItems != null)
+                                        {
+                                            string tmpCheckin = "## " + String.Join (" | ", checkinItems) + " ##";
+                                            reminderTxt += "\r\nThis is a copy of your extracted checkin data (in the correct format): \r\n" + tmpCheckin + "\r\n\r\nPerfect Message! Your score is 10.";
+                                            perfectScoreCt++;
+                                        }
                                     }
                                     else
                                     {
@@ -2580,6 +2629,7 @@ class Winlink_Checkins
             if (addonString != null)
             {
                 SortStringBuilder (addonString, "\r\n", 2);
+                // addonString.Insert (0,RRrow);
                 commentWrite.WriteLine (addonString);
             }
             // Add Google Sheets update
@@ -2652,12 +2702,13 @@ class Winlink_Checkins
             if (ICS206Ct > 0) { logWrite.WriteLine ("ICS 206 Checkins: " + ICS206Ct); }
             if (ICS208Ct > 0) { logWrite.WriteLine ("ICS 208 Checkins: " + ICS208Ct); }
             if (ICS210Ct > 0) { logWrite.WriteLine ("ICS 210 Checkins: " + ICS210Ct); }
+            if (ics213RRCt > 0) { logWrite.WriteLine ("ICS 213RR Checkins: " + ics213RRCt); }
             if (WBBMct > 0) { logWrite.WriteLine ("Welfare Bulletin Board Checkins: " + WBBMct); }
 
             if (radioGram > 0) { logWrite.WriteLine ("Radiogram Checkins: " + radioGramCt); }
             // next line is for the 20250203 exercise
             // logWrite.WriteLine ("Winlink Express: " + winlinkCt + "  PAT: " + patCt + "  RadioMail: " + radioMailCt + "  WoAD: " + woadCt + "\r\n");
-            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - qwmCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct - ICS204Ct - ICS205Ct - ICS205aCt - ICS206Ct - ICS208Ct - ICS210Ct - WBBMct) + "\r\n");
+            logWrite.WriteLine ("Total Plain and other Checkins: " + (ct - localWeatherCt - severeWeatherCt - incidentStatusCt - icsCt - winlinkCkinCt - damAssessCt - fieldSitCt - qwmCt - dyfiCt - rriCt - qwmCt - miCt - aprsCt - meshCt - PosRepCt - ICS201Ct - radioGramCt - ICS202Ct - ICS203Ct - ICS204Ct - ICS205Ct - ICS205aCt - ICS206Ct - ICS208Ct - ICS210Ct - ics213RRCt - WBBMct) + "\r\n");
             //var totalValidGPS = mapCt-noGPSCt;
             logWrite.WriteLine ("Total Checkins with a perfect message: (Not including " + noScoreCt + " NoScore's) " + perfectScoreCt);
             logWrite.WriteLine ("Total Checkins using the new format: " + newFormatCt);
