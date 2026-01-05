@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "${workspaceFolder}/Winlink_Checkins.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent"
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "run in external terminal",
+      "type": "process",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "start",
+        "cmd",
+        "/k",
+        "${workspaceFolder}/bin/Debug/net8.0/Winlink_CheckinsCsharp.exe"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

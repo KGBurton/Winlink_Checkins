@@ -1,0 +1,986 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WinlinkMessages>
+  <export_parameters>
+    <xml_file_version>1.0</xml_file_version>
+    <winlink_express_version>1.7.17.0</winlink_express_version>
+    <callsign></callsign>
+  </export_parameters>
+  <message_list>
+    <message>
+      <id>V2V4QCAI5JOH</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>N1DEC</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: N1DEC
+Message-ID: V2V4QCAI5JOH
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## N1DEC | FRED | MILFORD | NEW HAVEN | CT | USA | VARA | RMS | FN31LF ##
+Original Message for comparison:  N1DEC | FRED | MILFORD | NEW HAVEN | CT | USA | VARA | RMS | FN31LF
+I HAVE TO FINISH PAINTING THE CABINET TO AN OLD FC-301 ANTENNA TUNER ! 
+
+Your score is: 8
+	minus 1 point, missing or invalid band in field 7 - VARA, try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.
+	minus 1 point, missing or invalid mode in field 8 - RMS, try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 41.222268
+   Longitude: -73.00531
+   Band: 
+   Mode: 
+   Original Message ID: 2OCV5AJV4IQH
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>R88DDR2BXJMM</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>K8EAF</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: K8EAF
+Message-ID: R88DDR2BXJMM
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## K8EAF |  ED  |  CINCINNATI  |  HAMILTON CO  |  OH  |  VHF PACKET ## ##
+Original Message for comparison:   K8EAF |   ED  |  CINCINNATI  |   HAMILTON CO  |   OH  |  VHF PACKET ##
+## 39.21921, -84.36634  EM79TF 
+
+Your score is: 6
+	minus 2 point(s), for missing delimiter(s)/fields - see examples below.
+	You may have mixed the '|' and ',' delimiters in the check in data.	minus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) -  VHF PACKET ##, try USA, PHL, DEU, COL, VEN, CAN, AUS, AUT, TTO, NZL, BEL, NOR, ROU, SRB, LCA, etc
+	minus 1 point, missing or invalid state/province/region (due to missing country?) in field 5 -   OH 
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 39.229167
+   Longitude: -84.375
+   Band: VHF
+   Mode: PACKET
+   Original Message ID: 2RX8R8DJMBDM
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>4Q7S5U5DN7KM</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>KE8FMJ</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: KE8FMJ
+Message-ID: 4Q7S5U5DN7KM
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+You are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data with '|' delimiters!
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## KE8FMJ | ELIZABETH | XENIA | GREENE | D3 | OH VIA 145.030 KD3WCO-10 VARA-FM GATEWAY ##
+Original Message for comparison: KE8FMJ, ELIZABETH, XENIA, GREENE, D3, OH (VIA 145.030 KD3WCO-10 VARA-FM GATEWAY)
+
+
+
+Your score is: 6
+	minus 2 point(s), for missing delimiter(s)/fields - see examples below.
+	minus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - OH VIA 145.030 KD3WCO-10 VARA-FM GATEWAY, try USA, PHL, DEU, COL, VEN, CAN, AUS, AUT, TTO, NZL, BEL, NOR, ROU, SRB, LCA, etc
+	minus 1 point, missing or invalid state/province/region (due to missing country?) in field 5 -  D3
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: -85.979167
+   Longitude: -17.958333
+   Band: 
+   Mode: 
+   Original Message ID: 5QD57U4NSK7M
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>DF2A4DVLDN56</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>ZL2SEA</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: ZL2SEA
+Message-ID: DF2A4DVLDN56
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## ZL2SEA | NIGEL | KAEO | NEW ZEALAND |  |  NLD | 80M | SSB | RF64TV  ##
+Original Message for comparison:  ZL2SEA | NIGEL | KAEO | NEW ZEALAND |   |  NLD | 80 | SSB | RF64TV 
+HAPPY NEW YEAR FROM NZ 
+
+Your score is: 8
+	minus 1 point, missing or invalid state/province/region (due to missing country?) in field 5 -  
+	minus 1 point, missing or invalid mode in field 8 - SSB, try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: -35.124833
+   Longitude: 173.590333
+   Band: 80M
+   Mode: 
+   Original Message ID: 5VDDL4AND2F6
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>BC7TTY1VU119</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>VE7CUS</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: VE7CUS
+Message-ID: BC7TTY1VU119
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+You are encouraged to use the new format with '##' at the beginning and end '##' of your checkin data with '|' delimiters!
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## VE7CUS | DARREL | DELTA | NONE | BC | CAN | HF VARA | CN89KB ##
+Original Message for comparison: VE7CUS, DARREL, DELTA, NONE, BC, CAN,HF VARA, CN89KB
+
+
+Your score is: 8
+	minus 1 point, missing or invalid band in field 7 - HF VARA, try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.
+	minus 1 point, missing or invalid mode in field 8 - CN89KB, try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 49.0625
+   Longitude: -123.125
+   Band: HF
+   Mode: VARA HF
+   Original Message ID: 7BC1TVY1U1T9
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>EX3SE5B2UR93</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>NW3X</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: NW3X
+Message-ID: EX3SE5B2UR93
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## NW3X | THOMAS | SCRANTON | LACKAWANNA | PA | USA | 80M | VARA-HG | FN21EK## ##
+Original Message for comparison: NW3X | THOMAS | SCRANTON | LACKAWANNA | PA | USA |  80M | VARA-HG | FN21EK##
+
+COMMENTS: PLANS FOR 2026 - BUILD KITS THAT HAVE BEEN STTING AROUND FOR MONTHS - RELEARN CW AND GET ACTIVE THERE - PUT UP EMCOMM III BASE ANTENNA AND MORE.
+
+Your score is: 9
+	minus 1 point, missing or invalid mode in field 8 - VARA-HG, try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 41.4375
+   Longitude: -75.625
+   Band: 80M
+   Mode: 
+   Original Message ID: 9U2EE3SXRB53
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>LHNC5BKOW7EW</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>KN6EZF</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: KN6EZF
+Message-ID: LHNC5BKOW7EW
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## KN6EZF | MARK | REDDING | SHASTACA | USA 40M | VARA | CN80TO ##
+Original Message for comparison:  KN6EZF | MARK | REDDING | SHASTA  CA | USA 40M | VARA | CN80TO 
+
+Your score is: 6
+	minus 1 point(s), for missing delimiter(s)/fields - see examples below.
+	minus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - VARA, try USA, PHL, DEU, COL, VEN, CAN, AUS, AUT, TTO, NZL, BEL, NOR, ROU, SRB, LCA, etc
+	minus 1 point, missing or invalid state/province/region (due to missing country?) in field 5 -  USA 40M
+	minus 1 point, missing or invalid band in field 7 - CN80TO, try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 40.604167
+   Longitude: -122.375
+   Band: 40M
+   Mode: 
+   Original Message ID: BE7LNO5HKWCW
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>DHHHX6XON0B5</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>VA7XFM</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: VA7XFM
+Message-ID: DHHHX6XON0B5
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## VA7XFM | KENT | LANGLEY | BC | CANADA | 80M | VARAHF | CN89QC ##
+Original Message for comparison:  VA7XFM | KENT | LANGLEY | BC | CANADA | 80M | VARAHF | CN89QC 
+
+Your score is: 6
+	minus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - 80M, try USA, PHL, DEU, COL, VEN, CAN, AUS, AUT, TTO, NZL, BEL, NOR, ROU, SRB, LCA, etc
+	minus 1 point, missing or invalid state/province/region (due to missing country?) in field 5 -  CANADA
+	minus 1 point, missing or invalid band in field 7 - VARAHF, try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.
+	minus 1 point, missing or invalid mode in field 8 - CN89QC, try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 49.104167
+   Longitude: -122.625
+   Band: HF
+   Mode: VARA HF
+   Original Message ID: BOXHXH6D0NH5
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>Q9USWQYC1V6P</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>AD7FC</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: AD7FC
+Message-ID: Q9USWQYC1V6P
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+Check for a typo in your callsign in the checkin data: ADF7FC vs From:AD7FC
+You may have switched your call sign and name or left the call sign out
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## ADF7FC | ED | YAKIMA | YAKIMA | WA  | USA | 80M | VARA | CN96RO ##
+Original Message for comparison:   ADF7FC | ED | YAKIMA | YAKIMA | WA  | USA | 80 M | VARA |CN96RO  
+
+Your score is: 9
+	minus 1 for invalid or missing callsign as the first field - 
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 46.604167
+   Longitude: -120.541667
+   Band: 80M
+   Mode: VARA HF
+   Original Message ID: CU9WYS1QQV6P
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>XQIKYEKBX7DS</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>KB2HWL</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: KB2HWL
+Message-ID: XQIKYEKBX7DS
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+Check for a typo in your Maidenhead Grid (should be either xx##x or xx##): KB2HWL RIDGEWOOD RENSSELAER,NY RENSSELAER CO
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## No checkin data found! ##
+Original Message for comparison: KB2HWL RIDGEWOOD RENSSELAER, NY RENSSELAER CO
+
+Your score is: 1
+No checkin data found.
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 42.604167
+   Longitude: -73.708333
+   Band: 
+   Mode: 
+   Original Message ID: KIDKBYEXXQ7S
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>IIGBMD3I3MQT</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>N8JJW</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: N8JJW
+Message-ID: IIGBMD3I3MQT
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## N8JJW | JOSH | BENTON HARBOR | BERRIEN | MI | USA | 2M | VARA FM EN62SC ##
+Original Message for comparison: N8JJW | JOSH | BENTON HARBOR | BERRIEN | MI | USA | 2M | VARA FM EN62SC 
+
+Your score is: 9
+	minus 1 point, missing or invalid mode in field 8 - VARA FM EN62SC, try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 42.087467
+   Longitude: -86.462875
+   Band: 2M
+   Mode: VARA FM
+   Original Message ID: MI3DIMBQGI3T
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>2HN76WCWG59K</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>WR8RW</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: WR8RW
+Message-ID: 2HN76WCWG59K
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## WR8RW | ROBERT | TAYLORS | GREENVILLE | SC | USA | VARA | FM | EM85UA ##
+Original Message for comparison:  WR8RW | ROBERT | TAYLORS | GREENVILLE | SC | USA | VARA | FM | EM85UA
+         REDEPLOY / REPAIR HF NVIS END-FED HALF WAVE WIRE ANTENNAS AT 1.5 AND 4 METERS AGL. 
+
+Your score is: 9
+	minus 1 point, missing or invalid band in field 7 - VARA, try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 35.005
+   Longitude: -82.309833
+   Band: HF
+   Mode: VARA HF
+   Original Message ID: N5G6WC2W9H7K
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>NSLAYF2TOUIV</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>W0RMT</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: W0RMT
+Message-ID: NSLAYF2TOUIV
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## W0RMT | BUD | LOUISVILLE | BOULDER | CO | USA | 5G | AREDN | DM79KX ##
+Original Message for comparison:  W0RMT | BUD | LOUISVILLE | BOULDER | CO | USA | 5G | AREDN | DM79KX 
+
+Your score is: 9
+	minus 1 point, missing or invalid band in field 7 - 5G, try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.
+	AREDN is a project, not a valid band. Try "5CM, 9CM, 13CM, 33CM, or SHF."
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 39.979167
+   Longitude: -105.125
+   Band: 
+   Mode: MESH
+   Original Message ID: NSUAOLIFTY2V
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>OXC0YU6UNKW5</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>KA2R</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: KA2R
+Message-ID: OXC0YU6UNKW5
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## KA2R | MARTIN | LAGRANGEVILLE | DUTCHESS | NY | DUT | 40M | VARA HF | FN31CQ ##
+Original Message for comparison:  KA2R| MARTIN | LAGRANGEVILLE | DUTCHESS | NY | DUT | 40M | VARA HF | FN31CQ 
+
+Your score is: 8
+	minus 1 point, missing or invalid country in field 6 (3 letter abbreviation?) - DUT, try USA, PHL, DEU, COL, VEN, CAN, AUS, AUT, TTO, NZL, BEL, NOR, ROU, SRB, LCA, etc
+	minus 1 point, missing or invalid state/province/region (due to missing country?) in field 5 -  NY
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 41.6875
+   Longitude: -73.791667
+   Band: 40M
+   Mode: VARA HF
+   Original Message ID: ON6UCXKU0WY5
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>NTJUHZQ6O9XL</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>KS4YX</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: KS4YX
+Message-ID: NTJUHZQ6O9XL
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## KS4YX | GIL | SENECA | OCONEE | SC | USA |  | 2M | VHF | EM84MR ##
+Original Message for comparison:  KS4YX, GIL, SENECA, OCONEE, SC, USA,, 2M, VHF, EM84MR
+I PLAN TO DO MORE POTA THIS YEAR AS AN ACTIVATOR.  NOSUMMARY 
+
+Your score is: 8
+	minus 1 point, missing or invalid band in field 7 - , try something like TELNET, 2M, 70CM, 20M, 40M, VHF, UHF, HF, SHF, etc.
+	minus 1 point, missing or invalid mode in field 8 - 2M, try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 34.729167
+   Longitude: -82.958333
+   Band: VHF
+   Mode: 
+   Original Message ID: U9X6NQHJTZOL
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+    <message>
+      <id>RQO26Y05R79L</id>
+      <foldertype>Fixed</foldertype>
+      <folder>Outbox</folder>
+      <subject>GLAWN acknowledgement 2026/01/04 01:15:27Z</subject>
+      <time>2026/01/04 01:15:27Z</time>
+      <sender>GLAWN</sender>
+      <To>KI7HQA</To>
+      <rmsoriginator></rmsoriginator>
+      <rmsdestination></rmsdestination>
+      <rmspath></rmspath>
+      <location>43.845831N, 111.745744W (GPS)</location>
+      <csize></csize>
+      <messageserver></messageserver>
+      <precedence>2</precedence>
+      <peertopeer>False</peertopeer>
+      <routingflag></routingflag>
+      <source>GLAWN</source>
+      <unread>True</unread>
+      <flags>0</flags>
+      <messageoptions>False|False|||||</messageoptions>
+      <mime>Date: 2026/01/04 01:15:27Z
+From: GLAWN@winlink.org
+Subject: GLAWN acknowledgement 2026/01/04 01:15:27Z
+To: KI7HQA
+Message-ID: RQO26Y05R79L
+X-Source: KB7WHO
+X-Location: 43.845831N, 111.745744W(GPS)
+MIME-Version: 1.0
+Thank you for checking in to the GLAWN.
+
+
+This is a copy of your extracted checkin data (in the correct format). 
+Checkin Data: ## KI7HQA | ERNIE | PAHRUP | NYE | NV | USA | VHF | DM16XF ##
+Original Message for comparison: KI7HQA | ERNIE | PAHRUP | NYE | NV | USA | VHF | DM16XF
+
+Your score is: 9
+	minus 1 point, missing or invalid mode in field 8 - DM16XF, try something like PACKET, VARA FM, VARA HF, ARDOP, MESH, APRS, JS8CALL, PACTOR, etc)
+
+Recommended format reminder in the Comment/Message field:
+callSign, firstname, city, county, state/province/region, country, band, Mode, grid
+Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##
+Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##
+Example 3: ##xxNxx | Andre | Burnaby |  | BC | CAN | TELNET | SMTP | CN89ud
+	       Weather is great today!##
+
+Extracted Data: -1
+   Latitude: 36.229167
+   Longitude: -116.041667
+   Band: VHF
+   Mode: 
+   Original Message ID: Y602OR59Q7RL
+
+GLAWN Current Map: https://tinyurl.com/GLAWN-Map
+Comments: https://tinyurl.com/GLAWN-Additional-comments
+checkins.csv: https://tinyurl.com/GLAWN-CSV-checkins
+mapfile.csv: https://tinyurl.com/Current-CSV-mapfile
+</mime>
+    </message>
+  </message_list>
+</WinlinkMessages>

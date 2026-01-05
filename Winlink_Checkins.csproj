@@ -10,10 +10,14 @@
     <Product>Winlink_Checkins</Product>
     <AssemblyTitle>Winlink_Checkins</AssemblyTitle>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Google.Apis.Sheets.v4" Version="1.69.0.3694" />
     <PackageReference Include="System.Management" Version="7.0.2">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
+    <Content Include="DefaultData\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>
