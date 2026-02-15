@@ -5,42 +5,28 @@ VisualStudioVersion = 18.1.11312.151
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Winlink_Checkins", "Winlink_Checkins.csproj", "{9F78918E-5C3F-48BA-9526-F6E596AD40E5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSheetsCredentials.cs", "..\TestSheetsCredentials.cs\TestSheetsCredentials.cs.csproj", "{17B6676B-5FAD-4DCF-8F00-1A21A6331190}"
-EndProject
-Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "WinlinkCheckinsSetup", "..\WinlinkCheckinsSetup\WinlinkCheckinsSetup.vdproj", "{461F8942-E1E3-76BB-D269-3E4743F62B3C}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Debug|x64.ActiveCfg = Debug|x64
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Debug|x64.Build.0 = Debug|x64
+		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Debug|x86.Build.0 = Debug|Any CPU
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Release|x64.ActiveCfg = Release|Any CPU
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Release|x64.Build.0 = Release|Any CPU
-		{17B6676B-5FAD-4DCF-8F00-1A21A6331190}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{17B6676B-5FAD-4DCF-8F00-1A21A6331190}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{17B6676B-5FAD-4DCF-8F00-1A21A6331190}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{17B6676B-5FAD-4DCF-8F00-1A21A6331190}.Debug|x64.Build.0 = Debug|Any CPU
-		{17B6676B-5FAD-4DCF-8F00-1A21A6331190}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{17B6676B-5FAD-4DCF-8F00-1A21A6331190}.Release|Any CPU.Build.0 = Release|Any CPU
-		{17B6676B-5FAD-4DCF-8F00-1A21A6331190}.Release|x64.ActiveCfg = Release|Any CPU
-		{17B6676B-5FAD-4DCF-8F00-1A21A6331190}.Release|x64.Build.0 = Release|Any CPU
-		{461F8942-E1E3-76BB-D269-3E4743F62B3C}.Debug|Any CPU.ActiveCfg = Debug
-		{461F8942-E1E3-76BB-D269-3E4743F62B3C}.Debug|Any CPU.Build.0 = Debug
-		{461F8942-E1E3-76BB-D269-3E4743F62B3C}.Debug|x64.ActiveCfg = Debug
-		{461F8942-E1E3-76BB-D269-3E4743F62B3C}.Debug|x64.Build.0 = Debug
-		{461F8942-E1E3-76BB-D269-3E4743F62B3C}.Release|Any CPU.ActiveCfg = Release
-		{461F8942-E1E3-76BB-D269-3E4743F62B3C}.Release|Any CPU.Build.0 = Release
-		{461F8942-E1E3-76BB-D269-3E4743F62B3C}.Release|x64.ActiveCfg = Release
-		{461F8942-E1E3-76BB-D269-3E4743F62B3C}.Release|x64.Build.0 = Release
+		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Release|x86.ActiveCfg = Release|Any CPU
+		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -20,3 +20,5 @@ obj/
 *.mime
 DefaultData/credentials.json
 credentials.json
+bin/
+obj/
