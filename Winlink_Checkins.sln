@@ -5,6 +5,8 @@ VisualStudioVersion = 18.1.11312.151
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Winlink_Checkins", "Winlink_Checkins.csproj", "{9F78918E-5C3F-48BA-9526-F6E596AD40E5}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "WinlinkCheckinsSetup", "WinlinkCheckinsSetup\WinlinkCheckinsSetup.vdproj", "{E6320942-E697-8F3A-A9E4-F6CD995A17EB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Release|x64.Build.0 = Release|Any CPU
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Release|x86.ActiveCfg = Release|Any CPU
 		{9F78918E-5C3F-48BA-9526-F6E596AD40E5}.Release|x86.Build.0 = Release|Any CPU
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Debug|Any CPU.ActiveCfg = Debug
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Debug|Any CPU.Build.0 = Debug
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Debug|x64.ActiveCfg = Debug
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Debug|x64.Build.0 = Debug
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Debug|x86.ActiveCfg = Debug
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Debug|x86.Build.0 = Debug
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Release|Any CPU.ActiveCfg = Release
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Release|Any CPU.Build.0 = Release
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Release|x64.ActiveCfg = Release
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Release|x64.Build.0 = Release
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Release|x86.ActiveCfg = Release
+		{E6320942-E697-8F3A-A9E4-F6CD995A17EB}.Release|x86.Build.0 = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
