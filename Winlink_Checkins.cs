@@ -153,7 +153,7 @@ class Winlink_Checkins
             StringBuilder typoString = new ();
 
             // string callSignPattern = @"\b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b";
-            string countries = "AFGHANISTAN:AFG,ALBANIA:ALB,ALGERIA:DZA,ANDORRA:AND,ANGOLA:AGO,ANGUILLA:AIA,ANTARCTICA:ATA,ANTIGUA AND BARBUDA:ATG,ARGENTINA:ARG,ARMENIA:ARM,ARUBA:ABW,AUSTRALIA:AUS,AUSTRIA:AUT,AZERBAIJAN:AZE,BAHAMAS:BHS,BAHRAIN:BHR,BANGLADESH:BGD,BARBADOS:BRB,BELARUS:BLR,BELGIUM:BEL,BELIZE:BLZ,BENIN:BEN,BERMUDA:BMU,BHUTAN:BTN,BOLIVIA (PLURINATIONAL STATE OF):BOL,BONAIRE: SINT EUSTATIUS AND SABA:BES,BOSNIA AND HERZEGOVINA:BIH,BOTSWANA:BWA,BOUVET ISLAND:BVT,BRAZIL:BRA,BRITISH INDIAN OCEAN TERRITORY:IOT,BRUNEI DARUSSALAM:BRN,BULGARIA:BGR,BURKINA FASO:BFA,BURUNDI:BDI,CABO VERDE:CPV,CAMBODIA:KHM,CAMEROON:CMR,CANADA:CAN,CAYMAN ISLANDS:CYM,CENTRAL AFRICAN REPUBLIC:CAF,CHAD:TCD,CHILE:CHL,CHINA:CHN,CHRISTMAS ISLAND:CXR,COCOS (KEELING) ISLANDS:CCK,COLOMBIA:COL,COMOROS:COM,CONGO:COG,CONGO (DEMOCRATIC REPUBLIC OF THE):COD,COOK ISLANDS:COK,COSTA RICA:CRI,CROATIA:HRV,CUBA:CUB,CURAÇAO:CUW,CYPRUS:CYP,CZECHIA:CZE,CÔTE D'IVOIRE:CIV,DENMARK:DNK,DJIBOUTI:DJI,DOMINICA:DMA,DOMINICAN REPUBLIC:DOM,ECUADOR:ECU,EGYPT:EGY,EL SALVADOR:SLV,EQUATORIAL GUINEA:GNQ,ERITREA:ERI,ESTONIA:EST,ESWATINI:SWZ,ETHIOPIA:ETH,FALKLAND ISLANDS (MALVINAS):FLK,FAROE ISLANDS:FRO,FIJI:FJI,FINLAND:FIN,FRANCE:FRA,FRENCH GUIANA:GUF,FRENCH POLYNESIA:PYF,FRENCH SOUTHERN TERRITORIES:ATF,GABON:GAB,GAMBIA:GMB,GEORGIA:GEO,GERMANY:DEU,GHANA:GHA,GIBRALTAR:GIB,GREECE:GRC,GREENLAND:GRL,GRENADA:GRD,GUADELOUPE:GLP,GUAM:GUM,GUATEMALA:GTM,GUERNSEY:GGY,GUINEA:GIN,GUINEA-BISSAU:GNB,GUYANA:GUY,HAITI:HTI,HEARD ISLAND AND MCDONALD ISLANDS:HMD,HOLY SEE:VAT,HONDURAS:HND,HONG KONG:HKG,HUNGARY:HUN,ICELAND:ISL,INDIA:IND,INDONESIA:IDN,IRAN (ISLAMIC REPUBLIC OF):IRN,IRAQ:IRQ,IRELAND:IRL,ISLE OF MAN:IMN,ISRAEL:ISR,ITALY:ITA,JAMAICA:JAM,JAPAN:JPN,JERSEY:JEY,JORDAN:JOR,KAZAKHSTAN:KAZ,KENYA:KEN,KIRIBATI:KIR,KOREA (DEMOCRATIC PEOPLE'S REPUBLIC OF):PRK,KOREA (REPUBLIC OF):KOR,KUWAIT:KWT,KYRGYZSTAN:KGZ,LAO PEOPLE'S DEMOCRATIC REPUBLIC:LAO,LATVIA:LVA,LEBANON:LBN,LESOTHO:LSO,LIBERIA:LBR,LIBYA:LBY,LIECHTENSTEIN:LIE,LITHUANIA:LTU,LUXEMBOURG:LUX,MACAO:MAC,MADAGASCAR:MDG,MALAWI:MWI,MALAYSIA:MYS,MALDIVES:MDV,MALI:MLI,MALTA:MLT,MARSHALL ISLANDS:MHL,MARTINIQUE:MTQ,MAURITANIA:MRT,MAURITIUS:MUS,MAYOTTE:MYT,MEXICO:MEX,MICRONESIA (FEDERATED STATES OF):FSM,MOLDOVA (REPUBLIC OF):MDA,MONACO:MCO,MONGOLIA:MNG,MONTENEGRO:MNE,MONTSERRAT:MSR,MOROCCO:MAR,MOZAMBIQUE:MOZ,MYANMAR:MMR,NAMIBIA:NAM,NAURU:NRU,NEPAL:NPL,NETHERLANDS:NLD,NEW CALEDONIA:NCL,NEW ZEALAND:NZL,NICARAGUA:NIC,NIGER:NER,NIGERIA:NGA,NIUE:NIU,NORFOLK ISLAND:NFK,NORTH MACEDONIA:MKD,NORTHERN MARIANA ISLANDS:MNP,NORWAY:NOR,OMAN:OMN,PAKISTAN:PAK,PALAU:PLW,PALESTINE: STATE OF:PSE,PANAMA:PAN,PAPUA NEW GUINEA:PNG,PARAGUAY:PRY,PERU:PER,PHILIPPINES:PHL,PITCAIRN:PCN,POLAND:POL,PORTUGAL:PRT,PUERTO RICO:PRI,QATAR:QAT,ROMANIA:ROU,RUSSIAN FEDERATION:RUS,RWANDA:RWA,RÉUNION:REU,SAINT BARTHÉLEMY:BLM,SAINT HELENA: ASCENSION AND TRISTAN DA CUNHA:SHN,SAINT KITTS AND NEVIS:KNA,SAINT LUCIA:LCA,SAINT MARTIN (FRENCH PART):MAF,SAINT PIERRE AND MIQUELON:SPM,SAINT VINCENT AND THE GRENADINES:VCT,SAMOA:WSM,SAN MARINO:SMR,SAO TOME AND PRINCIPE:STP,SAUDI ARABIA:SAU,SENEGAL:SEN,SERBIA:SRB,SEYCHELLES:SYC,SIERRA LEONE:SLE,SINGAPORE:SGP,SINT MAARTEN (DUTCH PART):SXM,SLOVAKIA:SVK,SLOVENIA:SVN,SOLOMON ISLANDS:SLB,SOMALIA:SOM,SOUTH AFRICA:ZAF,SOUTH GEORGIA AND THE SOUTH SANDWICH ISLANDS:SGS,SOUTH SUDAN:SSD,SPAIN:ESP,SRI LANKA:LKA,SUDAN:SDN,SURINAME:SUR,SVALBARD AND JAN MAYEN:SJM,SWEDEN:SWE,SWITZERLAND:CHE,SYRIAN ARAB REPUBLIC:SYR,TAIWAN: PROVINCE OF CHINA:TWN,TAJIKISTAN:TJK,TANZANIA (UNITED REPUBLIC OF):TZA,THAILAND:THA,TIMOR-LESTE:TLS,TOGO:TGO,TOKELAU:TKL,TONGA:TON,TRINIDAD AND TOBAGO:TTO,TUNISIA:TUN,TÜRKIYE:TUR,TURKMENISTAN:TKM,TURKS AND CAICOS ISLANDS:TCA,TUVALU:TUV,UGANDA:UGA,UKRAINE:UKR,UNITED ARAB EMIRATES:ARE,UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND:GBR,UNITED STATES OF AMERICA:USA,UNITED STATES MINOR OUTLYING ISLANDS:UMI,URUGUAY:URY,UZBEKISTAN:UZB,VANUATU:VUT,VENEZUELA (BOLIVARIAN REPUBLIC OF):VEN,VIET NAM:VNM,VIRGIN ISLANDS (BRITISH):VGB,VIRGIN ISLANDS (U.S.):VIR,WALLIS AND FUTUNA:WLF,WESTERN SAHARA:ESH,YEMEN:YEM,ZAMBIA:ZMB,ZIMBABWE:ZWE,ÅLAND ISLANDS:ALA";
+            string countries = "AFGHANISTAN:AFG,ALBANIA:ALB,ALGERIA:DZA,ANDORRA:AND,ANGOLA:AGO,ANGUILLA:AIA,ANTARCTICA:ATA,ANTIGUA AND BARBUDA:ATG,ARGENTINA:ARG,ARMENIA:ARM,ARUBA:ABW,AUSTRALIA:AUS,AUSTRIA:AUT,AZERBAIJAN:AZE,BAHAMAS:BHS,BAHRAIN:BHR,BANGLADESH:BGD,BARBADOS:BRB,BELARUS:BLR,BELGIUM:BEL,BELIZE:BLZ,BENIN:BEN,BERMUDA:BMU,BHUTAN:BTN,BOLIVIA (PLURINATIONAL STATE OF):BOL,BONAIRE: SINT EUSTATIUS AND SABA:BES,BOSNIA AND HERZEGOVINA:BIH,BOTSWANA:BWA,BOUVET ISLAND:BVT,BRAZIL:BRA,BRITISH INDIAN OCEAN TERRITORY:IOT,BRUNEI DARUSSALAM:BRN,BULGARIA:BGR,BURKINA FASO:BFA,BURUNDI:BDI,CABO VERDE:CPV,CAMBODIA:KHM,CAMEROON:CMR,CANADA:CAN,CAYMAN ISLANDS:CYM,CENTRAL AFRICAN REPUBLIC:CAF,CHAD:TCD,CHILE:CHL,CHINA:CHN,CHRISTMAS ISLAND:CXR,COCOS (KEELING) ISLANDS:CCK,COLOMBIA:COL,COMOROS:COM,CONGO:COG,CONGO (DEMOCRATIC REPUBLIC OF THE):COD,COOK ISLANDS:COK,COSTA RICA:CRI,CROATIA:HRV,CUBA:CUB,CURAÇAO:CUW,CYPRUS:CYP,CZECHIA:CZE,CÔTE D'IVOIRE:CIV,DENMARK:DNK,DJIBOUTI:DJI,DOMINICA:DMA,DOMINICAN REPUBLIC:DOM,ECUADOR:ECU,EGYPT:EGY,EL SALVADOR:SLV,EQUATORIAL GUINEA:GNQ,ERITREA:ERI,ESTONIA:EST,ESWATINI:SWZ,ETHIOPIA:ETH,FALKLAND ISLANDS (MALVINAS):FLK,FAROE ISLANDS:FRO,FIJI:FJI,FINLAND:FIN,FRANCE:FRA,FRENCH GUIANA:GUF,FRENCH POLYNESIA:PYF,FRENCH SOUTHERN TERRITORIES:ATF,GABON:GAB,GAMBIA:GMB,GEORGIA:GEO,GERMANY:DEU,GHANA:GHA,GIBRALTAR:GIB,GREECE:GRC,GREENLAND:GRL,GRENADA:GRD,GUADELOUPE:GLP,GUAM:GUM,GUATEMALA:GTM,GUERNSEY:GGY,GUINEA:GIN,GUINEA-BISSAU:GNB,GUYANA:GUY,HAITI:HTI,HEARD ISLAND AND MCDONALD ISLANDS:HMD,HOLY SEE:VAT,HONDURAS:HND,HONG KONG:HKG,HUNGARY:HUN,ICELAND:ISL,INDIA:IND,INDONESIA:IDN,IRAN (ISLAMIC REPUBLIC OF):IRN,IRAQ:IRQ,IRELAND:IRL,ISLE OF MAN:IMN,ISRAEL:ISR,ITALY:ITA,JAMAICA:JAM,JAPAN:JPN,JERSEY:JEY,JORDAN:JOR,KAZAKHSTAN:KAZ,KENYA:KEN,KIRIBATI:KIR,KOREA (DEMOCRATIC PEOPLE'S REPUBLIC OF):PRK,KOREA (REPUBLIC OF):KOR,KUWAIT:KWT,KYRGYZSTAN:KGZ,LAO PEOPLE'S DEMOCRATIC REPUBLIC:LAO,LATVIA:LVA,LEBANON:LBN,LESOTHO:LSO,LIBERIA:LBR,LIBYA:LBY,LIECHTENSTEIN:LIE,LITHUANIA:LTU,LUXEMBOURG:LUX,MACAO:MAC,MADAGASCAR:MDG,MALAWI:MWI,MALAYSIA:MYS,MALDIVES:MDV,MALI:MLI,MALTA:MLT,MARSHALL ISLANDS:MHL,MARTINIQUE:MTQ,MAURITANIA:MRT,MAURITIUS:MUS,MAYOTTE:MYT,MEXICO:MEX,MICRONESIA (FEDERATED STATES OF):FSM,MOLDOVA (REPUBLIC OF):MDA,MONACO:MCO,MONGOLIA:MNG,MONTENEGRO:MNE,MONTSERRAT:MSR,MOROCCO:MAR,MOZAMBIQUE:MOZ,MYANMAR:MMR,NAMIBIA:NAM,NAURU:NRU,NEPAL:NPL,NETHERLANDS:NLD,NEW CALEDONIA:NCL,NEW ZEALAND:NZL,NICARAGUA:NIC,NIGER:NER,NIGERIA:NGA,NIUE:NIU,NORFOLK ISLAND:NFK,NORTH MACEDONIA:MKD,NORTHERN MARIANA ISLANDS:MNP,NORWAY:NOR,OMAN:OMN,PAKISTAN:PAK,PALAU:PLW,PALESTINE:PSE,PANAMA:PAN,PAPUA NEW GUINEA:PNG,PARAGUAY:PRY,PERU:PER,PHILIPPINES:PHL,PITCAIRN:PCN,POLAND:POL,PORTUGAL:PRT,PUERTO RICO:PRI,QATAR:QAT,ROMANIA:ROU,RUSSIAN FEDERATION:RUS,RWANDA:RWA,RÉUNION:REU,SAINT BARTHÉLEMY:BLM,SAINT HELENA: ASCENSION AND TRISTAN DA CUNHA:SHN,SAINT KITTS AND NEVIS:KNA,SAINT LUCIA:LCA,SAINT MARTIN (FRENCH PART):MAF,SAINT PIERRE AND MIQUELON:SPM,SAINT VINCENT AND THE GRENADINES:VCT,SAMOA:WSM,SAN MARINO:SMR,SAO TOME AND PRINCIPE:STP,SAUDI ARABIA:SAU,SENEGAL:SEN,SERBIA:SRB,SEYCHELLES:SYC,SIERRA LEONE:SLE,SINGAPORE:SGP,SINT MAARTEN (DUTCH PART):SXM,SLOVAKIA:SVK,SLOVENIA:SVN,SOLOMON ISLANDS:SLB,SOMALIA:SOM,SOUTH AFRICA:ZAF,SOUTH GEORGIA AND THE SOUTH SANDWICH ISLANDS:SGS,SOUTH SUDAN:SSD,SPAIN:ESP,SRI LANKA:LKA,SUDAN:SDN,SURINAME:SUR,SVALBARD AND JAN MAYEN:SJM,SWEDEN:SWE,SWITZERLAND:CHE,SYRIAN ARAB REPUBLIC:SYR,TAIWAN: PROVINCE OF CHINA:TWN,TAJIKISTAN:TJK,TANZANIA (UNITED REPUBLIC OF):TZA,THAILAND:THA,TIMOR-LESTE:TLS,TOGO:TGO,TOKELAU:TKL,TONGA:TON,TRINIDAD AND TOBAGO:TTO,TUNISIA:TUN,TÜRKIYE:TUR,TURKMENISTAN:TKM,TURKS AND CAICOS ISLANDS:TCA,TUVALU:TUV,UGANDA:UGA,UKRAINE:UKR,UNITED ARAB EMIRATES:ARE,UNITED KINGDOM OF GREAT BRITAIN AND NORTHERN IRELAND:GBR,UNITED STATES OF AMERICA:USA,UNITED STATES MINOR OUTLYING ISLANDS:UMI,URUGUAY:URY,UZBEKISTAN:UZB,VANUATU:VUT,VENEZUELA (BOLIVARIAN REPUBLIC OF):VEN,VIET NAM:VNM,VIRGIN ISLANDS (BRITISH):VGB,VIRGIN ISLANDS (U.S.):VIR,WALLIS AND FUTUNA:WLF,WESTERN SAHARA:ESH,YEMEN:YEM,ZAMBIA:ZMB,ZIMBABWE:ZWE,ÅLAND ISLANDS:ALA";
             string testString = "";
             string rosterString = "";
             string roster = "";
@@ -770,7 +770,7 @@ class Winlink_Checkins
                         // check for removal message
                         var removeStringExample = "If you want to be removed from the roster, send “Remove Me Now” to GLAWN in a message";
                         junk = fileText.IndexOf (removeStringExample);
-                        if (junk == -1) removal = fileText.IndexOf ("REMOVE ME NOW");
+                        if (junk == -1) removal = fileText.IndexOf ("REMOVEMENOW");
 
                         // look to see if it was a bounced message
                         var bounced = fileText.IndexOf ("UNDELIVERABLE");
@@ -1562,7 +1562,7 @@ class Winlink_Checkins
                                         {
                                             checkIn = null; // Explicitly set to null
                                             string safeMessageID = messageID ?? "";
-                                            Console.WriteLine ("1319 Invalid checkin data in messageID: " + safeMessageID);
+                                            Console.WriteLine ("1565 Invalid checkin data in messageID: " + safeMessageID);
                                         }
                                         if (fromTxt == "DZ4E")
                                         {
@@ -1583,12 +1583,12 @@ class Winlink_Checkins
                                         if (tempFromTxt == "")
                                         {
                                             if (fromTxt != null) callSignTypo = fromTxt;
-                                            Console.WriteLine ("1556 fromTxt is null or invalid in :" + messageID);
+                                            Console.WriteLine ("1586 fromTxt is null or invalid in :" + messageID);
                                         }
                                         else if (tempCheckIn == "")
                                         {
                                             if (checkIn != null) callSignTypo = checkIn;
-                                            Console.WriteLine ("1561 checkIn: " + checkIn + " from msgField " + msgField + " is null, invalid, or does not match the From data: " + fromTxt + " in :" + messageID);
+                                            Console.WriteLine ("1591 checkIn: " + checkIn + " from msgField " + msgField + " is null, invalid, or does not match the From data: " + fromTxt + " in :" + messageID);
                                             checkIn = fromTxt;
                                         }
                                     }
@@ -1667,7 +1667,7 @@ class Winlink_Checkins
                                     if (checkinItems == null)
                                     {
                                         score = 1;
-                                        pointsOff += "No checkin data found.";
+                                        pointsOff += "No checkin data found (but you are still checked in). See the examples.";
                                         if (exampleIncluded == true) pointsOff += "It looks like you included the example checkin data. 1660\r\n";
                                     }
                                     else
@@ -1969,7 +1969,7 @@ class Winlink_Checkins
                                         else
                                         {
                                             score = 1;
-                                            pointsOff += "No checkin data found.\r\n";
+                                            pointsOff += "No checkin data found (but you are still checked in). See the examples\r\n";
                                             if (exampleIncluded == true) pointsOff += "It looks like you used the example checkin data instead of your own. 1961\r\n";
                                         }
                                         if (len < 0) pointsOff += "\tThere should always be nine data elements.\r\n";
@@ -2496,13 +2496,14 @@ class Winlink_Checkins
                                                 string tmpCheckinData = String.Join (" | ", checkinItems);
                                                 if (tmpCheckinData == "")
                                                 {
-                                                    tmpCheckinData = "No checkin data found! ##\r\n";
+                                                    tmpCheckinData = "No checkin data found (but you are still checked in)! See the examples.##\r\n";
                                                     if (exampleIncluded == true) tmpCheckinData += "It looks like used the example checkin data instead of your own. 2494\r\n";
                                                 }
 
                                                 reminderTxt += "\r\n" + "\r\nThis is a copy of your extracted checkin data (in the correct format). \r\nCheckin Data: ## " + tmpCheckinData + " ##" +
                                                     "\r\nOriginal Message for comparison: " + originalMsgField + "\r\n\r\n" +
                                                     "Your score is: " + score + "\r\n" + pointsOff +
+                                                    "See the example above in Checkin Data. \r\n" +
                                                     "\r\nRecommended format reminder in the Comment/Message field:\r\ncallSign, firstname, city, county, state/province/region, country, band, Mode, grid\r\n" +
                                                    "Example: ##xxNxxx | Greg | Sugar City | Madison | ID | USA | HF | VARA HF | DN43du##\r\n" +
                                                    "Example 2: ##DxNxx | Mario | TONDO | MANILA | NCR | PHL | 2M | VARA FM | PK04LO##\r\n" +
@@ -2809,7 +2810,7 @@ class Winlink_Checkins
                         + "google spreadsheet id=" + spreadsheetId + "// this is required and must be valid to open the google sheet that acts as a database for the net\r\n"
                         + "credential filename=" + credentialFilename + "// this file is required to programatically open the google sheet that acts as a database for the net\r\n"
                         + "roster string=" + roster;
-                if (tmpInput != "Y") File.WriteAllText (rosterFile, rosterString);// if tmpInput is not "Y", write the roster file
+                if (tmpInput != "Y" && tmpInput != "S") File.WriteAllText (rosterFile, rosterString);// if tmpInput is not "Y" or "S", write the roster file
                 else Console.WriteLine ("Roster.txt was not updated. If you want to update it, run the program again without skipping the google update.\r\n");
 
                 if (duplicates.Length != 0) { logWrite.WriteLine (duplicates + "\r\n"); }
@@ -2866,7 +2867,7 @@ class Winlink_Checkins
                 if (badBandCt > 0) logWrite.WriteLine ("Checkins with a bad band field: " + badBandCt);
                 // logWrite.Write(badModeString);
                 if (badModeCt > 0) logWrite.WriteLine ("Checkins with a bad mode field: " + badModeCt);
-                if (noGPSCt > 0) logWrite.WriteLine (noGPSString + "Total without a location: " + noGPSCt);
+                logWrite.WriteLine ("Total without a location: " + noGPSCt + "  -  " + noGPSString);
                 if (noScoreCt > 0) { logWrite.Write (noScoreString); logWrite.WriteLine ("Messages not scored: " + noScoreCt + "\r\n++++++++++++++++\r\n"); }
                 if (typoString.Length != 0) logWrite.WriteLine ("Callsign typo: \r\n" + typoString);
                 logWrite.Write ("++++++++++++++++\r\n" + addonString);
@@ -2878,12 +2879,16 @@ class Winlink_Checkins
 
                 if (File.Exists (pythonScript))
                 {
+                    // Use the specific, working Python 3.13 interpreter
+                    string pythonExe = @"C:\Users\Ken\scoop\apps\python313\current\python.exe";
+
                     ProcessStartInfo startInfo = new ()
                     {
-                        FileName = "py",  // Or "python" if preferred
-                        Arguments = $"\"{pythonScript}\" \"{mimeDir}\"",
+                        FileName = pythonExe,
+                        // -u = unbuffered stdout/stderr (optional but handy for logging)
+                        Arguments = $"-u \"{pythonScript}\" \"{mimeDir}\"",
                         WorkingDirectory = exeDir,
-                        UseShellExecute = false,  // For clean output capture if needed
+                        UseShellExecute = false,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true
                     };
@@ -2895,7 +2900,9 @@ class Winlink_Checkins
                         string output = process.StandardOutput.ReadToEnd ();
                         string error = process.StandardError.ReadToEnd ();
                         Console.WriteLine ($"Python output: {output}");
-                        if (!string.IsNullOrEmpty (error)) Console.WriteLine ($"Python error: {error}");
+                        if (!string.IsNullOrEmpty (error))
+                            Console.WriteLine ($"Python error: {error}");
+                        Console.WriteLine ($"Extracted forms and csv data have been extracted successfully.");
                     }
                 }
                 else
@@ -2978,8 +2985,10 @@ class Winlink_Checkins
     public static string? isValidCallsign (string? input)
     // This method validates a callsign using the regex pattern \b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b. 
     {
+        
         if (input != null)
         {
+            input = input.Replace (" ", ""); // some people keep putting spaces in their callsign
             string pattern = @"\b\d{0,2}[A-Z]{1,2}\d{1,2}[A-Z]{1,6}\b";
             Regex regexCallSign = new Regex (pattern, RegexOptions.IgnoreCase);
             Match match = regexCallSign.Match (input);
@@ -3150,41 +3159,7 @@ class Winlink_Checkins
         // Join the sorted array back into a string
         return string.Join (delimiter, items);
     }
-    //public static void SortStringBuilder (StringBuilder sb, string delimiter, int rowsToSkip)
-    //{
-    //    // Convert the StringBuilder content to a string
-    //    string content = sb.ToString ();
-    //    content = content.Trim (';').Trim ('|').Trim ().Replace ("\r\n\r\n", "\r\n");
-    //    string header = "";
-    //    int i = 0;
-    //    // Split the string using the delimiter
-    //    string [] items = content.Split (new [] { delimiter }, StringSplitOptions.None);
-
-    //    // Keep the header (first row)
-    //    if (rowsToSkip > 0)
-    //    {
-    //        while (i < rowsToSkip)
-    //        {
-    //            header = header + items [i] + delimiter;
-    //            i++;
-    //        }
-
-    //    }
-
-    //    // Sort the rest of the array (skip the first row)
-    //    string [] rowsToSort = items.Skip (rowsToSkip).ToArray ();
-    //    Array.Sort (rowsToSort);
-
-    //    // Join the header and sorted rows back into a string
-    //    string sortedContent = header + string.Join (delimiter, rowsToSort);
-    //    sortedContent
-    //        .Trim(delimiter)
-    //        .Replace ("\r\n\r\n", "\r\n");
-    //    // Clear the original StringBuilder and append the sorted content
-    //    sb.Clear ();
-    //    sb.Append (sortedContent);
-    //}
-    public static void SortStringBuilder (StringBuilder sb, string delimiter, int rowsToSkip)
+        public static void SortStringBuilder (StringBuilder sb, string delimiter, int rowsToSkip)
     {
         string content = sb.ToString ()
             .Trim (';', '|')
@@ -3441,6 +3416,14 @@ class Winlink_Checkins
             //  input = "PACKET";
             //break;
 
+            case "":
+                if (input2 == "TELNET")
+                {
+                    input = "SMTP";
+                    error = "\r\nMode missing - normalized to SMTP based on the band: " + input2;
+                }
+                break;
+
             default:
                 // Console.WriteLine("Bad mode: "+messageID+"  "+checkIn+": "+input+" - "+ msgField+ "\r\n");
                 input = "";
@@ -3649,19 +3632,28 @@ class Winlink_Checkins
         if (fileText.Contains("ICS 217A") && fileText.Contains ("##"))
         {
             var removeStart = msgField.IndexOf ("\r\n");
-            var removeEnd = msgField.Length;
+            var removeEnd = msgField.Length;                      
             removeEnd = msgField.LastIndexOf ("\t", removeEnd);
+            Console.WriteLine ("messageID: " + messageID);
             msgField = msgField.Remove (removeStart, removeEnd - removeStart);
             msgField = msgField.Replace ("\t", "");
         }
 
         // int lineBreak = fileText.IndexOf("=\r\n");
+        if (messageID.Contains ("K8EAF"))
+        {
+            Console.WriteLine ("K8EAF sent:" + msgField);
+            msgField = "## K8EAF |  ED  |  CINCINNATI  |  HAMILTON CO  |  OH  | USA | VHF | PACKET | EM79tf ##";
+
+        } // Ed checks in every week and I am tired of manually fixing his badly formatted data.
+
         if (messageID.Contains ("AD4BL"))
         {
             Console.WriteLine ("AD4BL sent:" + msgField);
             msgField = "## AD4BL | LINDA | NORTHSTARBOROUGH | FAIRBANKS | AK | USA | TELNET | SMTP | BP64ju ##";
 
-        } // AD4BL has a lot of spaces in the message field for delimiters
+        } // AD4BL has a lot of spaces in the message field for delimiters but they aren't consistent enough to program around
+
         int count = (msgField.Length - msgField.Replace ("  ", "").Length) / 4;// did they use spaces for delimiters?
         if (count > 5 && msgField != "")
         {
@@ -3776,7 +3768,9 @@ class Winlink_Checkins
             ";",
             "!",
             "}",
-            "{",
+            "{",            "}",
+            "[",
+            "]", 
             "1", // number 1
             " L ", // Space-L-Space
             "  L  ", // Space-Space-L-Space-Space
